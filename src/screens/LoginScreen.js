@@ -41,8 +41,14 @@ const LoginScreen = ({ navigation }) => {
 
         setIsLoading(true);
         try {
-            const result = await signIn.create({
+            // Step 1: Create sign-in with identifier only
+            await signIn.create({
                 identifier: email.trim(),
+            });
+
+            // Step 2: Attempt password authentication
+            const result = await signIn.attemptFirstFactor({
+                strategy: 'password',
                 password,
             });
 
@@ -50,11 +56,29 @@ const LoginScreen = ({ navigation }) => {
                 await setActive({ session: result.createdSessionId });
                 successNotification();
             } else {
-                setError('Sign in incomplete. Please try again.');
+                // For any other status, show generic error
+                setError('Unable to sign in. Please check your credentials.');
             }
         } catch (err) {
             console.error('Sign in error:', err);
-            setError(err.errors?.[0]?.message || 'Invalid email or password');
+            
+            // Parse Clerk error messages
+            const clerkError = err.errors?.[0];
+            if (clerkError) {
+                if (clerkError.code === 'form_identifier_not_found') {
+                    setError('No account found with this email. Please sign up first.');
+                } else if (clerkError.code === 'form_password_incorrect') {
+                    setError('Incorrect password. Please try again.');
+                } else if (clerkError.code === 'form_identifier_invalid') {
+                    setError('Please enter a valid email address.');
+                } else if (clerkError.code === 'strategy_for_user_invalid') {
+                    setError('No account found with this email. Please sign up first.');
+                } else {
+                    setError(clerkError.message || 'Sign in failed. Please try again.');
+                }
+            } else {
+                setError(err.message || 'Invalid email or password');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -141,6 +165,17 @@ const LoginScreen = ({ navigation }) => {
                         <Text style={[styles.signUpText, { color: colors.primary }]}>Sign Up</Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Admin Login Link */}
+                <TouchableOpacity 
+                    style={styles.adminLink} 
+                    onPress={() => navigation.navigate('AdminLogin')}
+                >
+                    <MaterialIcons name="admin-panel-settings" size={16} color={colors.textMuted} />
+                    <Text style={[styles.adminLinkText, { color: colors.textMuted }]}>
+                        Admin Login
+                    </Text>
+                </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
     );
@@ -174,6 +209,17 @@ const styles = StyleSheet.create({
     footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32 },
     footerText: { fontSize: 14 },
     signUpText: { fontSize: 14, fontWeight: '600' },
+    adminLink: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        marginTop: 24,
+        gap: 6,
+    },
+    adminLinkText: { 
+        fontSize: 13, 
+        fontFamily: 'Inter_400Regular',
+    },
 });
 
 export default LoginScreen;

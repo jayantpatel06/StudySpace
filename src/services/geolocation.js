@@ -1,8 +1,8 @@
 import * as Location from 'expo-location';
+import { supabase } from '../config/supabase';
 
-// Library locations for geofencing
-// Add your library coordinates here
-const LIBRARY_LOCATIONS = [
+// Library locations for geofencing (fallback if database fails)
+let LIBRARY_LOCATIONS = [
     {
         id: 'main_library',
         name: 'Main Library',
@@ -18,6 +18,53 @@ const LIBRARY_LOCATIONS = [
         radiusMeters: 50,
     },
 ];
+
+// Cache for database libraries
+let cachedLibraries = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch libraries from database
+ */
+export const fetchLibrariesFromDB = async () => {
+    try {
+        // Check cache
+        if (cachedLibraries && cacheTimestamp && (Date.now() - cacheTimestamp < CACHE_DURATION)) {
+            return cachedLibraries;
+        }
+
+        const { data, error } = await supabase
+            .from('libraries')
+            .select('*')
+            .eq('is_active', true);
+
+        if (error) {
+            console.error('Error fetching libraries:', error);
+            return LIBRARY_LOCATIONS; // Return fallback
+        }
+
+        if (data && data.length > 0) {
+            // Transform to match expected format
+            cachedLibraries = data.map(lib => ({
+                id: lib.id.toString(),
+                name: lib.name,
+                latitude: parseFloat(lib.latitude),
+                longitude: parseFloat(lib.longitude),
+                radiusMeters: lib.radius_meters || 100,
+                address: lib.address,
+                totalSeats: lib.total_seats,
+            }));
+            cacheTimestamp = Date.now();
+            return cachedLibraries;
+        }
+
+        return LIBRARY_LOCATIONS;
+    } catch (error) {
+        console.error('Error in fetchLibrariesFromDB:', error);
+        return LIBRARY_LOCATIONS;
+    }
+};
 
 /**
  * Request location permissions
@@ -90,19 +137,43 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 /**
  * Check if user is within any library geofence
+ * @param {object} selectedLibrary - Optional: check against a specific library
  * @returns {Promise<{inRange: boolean, nearestLibrary: object | null, distance: number | null}>}
  */
-export const checkLibraryProximity = async () => {
+export const checkLibraryProximity = async (selectedLibrary = null) => {
     const location = await getCurrentLocation();
 
     if (!location) {
         return { inRange: false, nearestLibrary: null, distance: null, error: 'Location unavailable' };
     }
 
+    // If a specific library is selected, check only against that
+    if (selectedLibrary) {
+        const distance = calculateDistance(
+            location.latitude,
+            location.longitude,
+            parseFloat(selectedLibrary.latitude),
+            parseFloat(selectedLibrary.longitude)
+        );
+        
+        const radiusMeters = selectedLibrary.radius_meters || selectedLibrary.radiusMeters || 100;
+        const inRange = distance <= radiusMeters;
+
+        return {
+            inRange,
+            nearestLibrary: selectedLibrary,
+            distance: Math.round(distance),
+            userLocation: location,
+        };
+    }
+
+    // Otherwise check against all libraries
+    const libraries = await fetchLibrariesFromDB();
+    
     let nearestLibrary = null;
     let minDistance = Infinity;
 
-    for (const library of LIBRARY_LOCATIONS) {
+    for (const library of libraries) {
         const distance = calculateDistance(
             location.latitude,
             location.longitude,
@@ -129,13 +200,17 @@ export const checkLibraryProximity = async () => {
 /**
  * Start watching location for real-time updates
  * @param {function} onLocationChange - Callback when location changes
+ * @param {object} selectedLibrary - Optional: watch against a specific library
  * @returns {Promise<{remove: function}>} Location subscription
  */
-export const watchLocation = async (onLocationChange) => {
+export const watchLocation = async (onLocationChange, selectedLibrary = null) => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) {
         return null;
     }
+
+    // Fetch libraries for proximity check
+    const libraries = selectedLibrary ? [selectedLibrary] : await fetchLibrariesFromDB();
 
     return await Location.watchPositionAsync(
         {
@@ -154,12 +229,16 @@ export const watchLocation = async (onLocationChange) => {
             let nearestLibrary = null;
             let minDistance = Infinity;
 
-            for (const library of LIBRARY_LOCATIONS) {
+            for (const library of libraries) {
+                const lat = parseFloat(library.latitude);
+                const lng = parseFloat(library.longitude);
+                const radius = library.radius_meters || library.radiusMeters || 100;
+
                 const distance = calculateDistance(
                     coords.latitude,
                     coords.longitude,
-                    library.latitude,
-                    library.longitude
+                    lat,
+                    lng
                 );
 
                 if (distance < minDistance) {
@@ -167,7 +246,7 @@ export const watchLocation = async (onLocationChange) => {
                     nearestLibrary = library;
                 }
 
-                if (distance <= library.radiusMeters) {
+                if (distance <= radius) {
                     inRange = true;
                 }
             }
@@ -183,9 +262,11 @@ export const watchLocation = async (onLocationChange) => {
 };
 
 /**
- * Get library locations (for map display)
+ * Get library locations (from database or fallback)
  */
-export const getLibraryLocations = () => LIBRARY_LOCATIONS;
+export const getLibraryLocations = async () => {
+    return await fetchLibrariesFromDB();
+};
 
 /**
  * Add a custom library location

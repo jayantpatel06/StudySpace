@@ -16,13 +16,25 @@ import RewardsScreen from './src/screens/RewardsScreen';
 import SeatDetailsScreen from './src/screens/SeatDetailsScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import SignUpScreen from './src/screens/SignUpScreen';
+import LibrarySelectionScreen from './src/screens/LibrarySelectionScreen';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import AppLoading from './src/components/AppLoading';
+
+// Admin Screens
+import {
+  AdminLoginScreen,
+  AdminDashboardScreen,
+  AdminLibrariesScreen,
+  AddEditLibraryScreen,
+  AdminSettingsScreen,
+} from './src/screens/admin';
 
 import { LocationProvider } from './src/context/LocationContext';
 import { BookingProvider } from './src/context/BookingContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { AdminProvider, useAdmin } from './src/context/AdminContext';
+import { LibraryProvider } from './src/context/LibraryContext';
 import { ToastProvider } from './src/components/Toast';
 import QRScanScreen from './src/screens/QRScanScreen';
 import BookingsScreen from './src/screens/BookingsScreen';
@@ -35,6 +47,7 @@ import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const AuthStack = createNativeStackNavigator();
+const AdminStack = createNativeStackNavigator();
 
 function HomeStack() {
   const { colors } = useTheme();
@@ -118,6 +131,7 @@ function AppContent() {
         <Stack.Screen name="Rewards" component={RewardsScreen} />
         <Stack.Screen name="SeatDetails" component={SeatDetailsScreen} />
         <Stack.Screen name="QRScan" component={QRScanScreen} options={{ presentation: 'modal' }} />
+        <Stack.Screen name="LibrarySelection" component={LibrarySelectionScreen} options={{ presentation: 'modal' }} />
       </Stack.Navigator>
     </>
   );
@@ -132,12 +146,45 @@ function AuthNavigator() {
       <AuthStack.Navigator screenOptions={{ headerShown: false }}>
         <AuthStack.Screen name="Login" component={LoginScreen} />
         <AuthStack.Screen name="SignUp" component={SignUpScreen} />
+        <AuthStack.Screen name="AdminLogin" component={AdminLoginScreen} />
       </AuthStack.Navigator>
     </>
   );
 }
 
+// Admin Navigation
+function AdminNavigator() {
+  const { isDark } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <AdminStack.Navigator screenOptions={{ headerShown: false }}>
+        <AdminStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+        <AdminStack.Screen name="AdminLibraries" component={AdminLibrariesScreen} />
+        <AdminStack.Screen name="AdminAddLibrary" component={AddEditLibraryScreen} />
+        <AdminStack.Screen name="AdminEditLibrary" component={AddEditLibraryScreen} />
+        <AdminStack.Screen name="AdminSettings" component={AdminSettingsScreen} />
+      </AdminStack.Navigator>
+    </>
+  );
+}
+
+// Root navigator that handles both user and admin flows
 function RootNavigator() {
+  const { isAdminLoggedIn, isLoading: isAdminLoading } = useAdmin();
+
+  // Wait for admin session check to complete
+  if (isAdminLoading) {
+    return <AppLoading />;
+  }
+
+  // If admin is logged in, show admin dashboard
+  if (isAdminLoggedIn) {
+    return <AdminNavigator />;
+  }
+
+  // Otherwise show normal user flow with Clerk authentication
   return (
     <>
       <SignedIn>
@@ -167,17 +214,21 @@ export default function App() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <ErrorBoundary>
             <ThemeProvider>
-              <AuthProvider>
-                <LocationProvider>
-                  <BookingProvider>
-                    <ToastProvider>
-                      <NavigationContainer>
-                        <RootNavigator />
-                      </NavigationContainer>
-                    </ToastProvider>
-                  </BookingProvider>
-                </LocationProvider>
-              </AuthProvider>
+              <AdminProvider>
+                <AuthProvider>
+                  <LibraryProvider>
+                    <LocationProvider>
+                      <BookingProvider>
+                        <ToastProvider>
+                          <NavigationContainer>
+                            <RootNavigator />
+                          </NavigationContainer>
+                        </ToastProvider>
+                      </BookingProvider>
+                    </LocationProvider>
+                  </LibraryProvider>
+                </AuthProvider>
+              </AdminProvider>
             </ThemeProvider>
           </ErrorBoundary>
         </GestureHandlerRootView>

@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocation } from '../context/LocationContext';
 import { useBooking } from '../context/BookingContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLibrary } from '../context/LibraryContext';
 import SkeletonLoader, { SkeletonCard } from '../components/SkeletonLoader';
 import OfflineIndicator from '../components/OfflineIndicator';
 import { lightImpact } from '../utils/haptics';
@@ -12,13 +13,22 @@ import { lightImpact } from '../utils/haptics';
 
 const HomeScreen = () => {
     const navigation = useNavigation();
-    const { locationStatus } = useLocation();
+    const { locationStatus, setTargetLibrary, refreshLocation, distanceToLibrary } = useLocation();
     const { activeBooking, cancelBooking, completeBooking } = useBooking();
     const { colors, isDark } = useTheme();
+    const { selectedLibrary } = useLibrary();
     const [remainingSeconds, setRemainingSeconds] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [isExpired, setIsExpired] = useState(false);
+
+    // Sync selected library with location context
+    useEffect(() => {
+        if (selectedLibrary) {
+            // setTargetLibrary already calls refreshLocation internally
+            setTargetLibrary(selectedLibrary);
+        }
+    }, [selectedLibrary?.id]); // Only trigger when library ID changes
 
     // Simulate loading state
     useEffect(() => {
@@ -94,6 +104,47 @@ const HomeScreen = () => {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <OfflineIndicator />
             <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
+                {/* Library Selection Banner */}
+                <TouchableOpacity
+                    style={[styles.libraryBanner, {
+                        backgroundColor: selectedLibrary ? colors.primaryLight : colors.surface,
+                        borderColor: selectedLibrary ? colors.primary : colors.border,
+                    }]}
+                    onPress={() => {
+                        lightImpact();
+                        navigation.navigate('LibrarySelection');
+                    }}
+                >
+                    <View style={[styles.libraryBannerIcon, { 
+                        backgroundColor: selectedLibrary ? colors.primary : colors.surfaceSecondary 
+                    }]}>
+                        <MaterialIcons 
+                            name="local-library" 
+                            size={20} 
+                            color={selectedLibrary ? '#fff' : colors.textMuted} 
+                        />
+                    </View>
+                    <View style={styles.libraryBannerContent}>
+                        <Text style={[styles.libraryBannerLabel, { color: colors.textSecondary }]}>
+                            {selectedLibrary ? 'Selected Library' : 'No Library Selected'}
+                        </Text>
+                        <Text style={[styles.libraryBannerName, { color: colors.text }]}>
+                            {selectedLibrary ? selectedLibrary.name : 'Tap to select a library'}
+                        </Text>
+                    </View>
+                    <MaterialIcons name="chevron-right" size={24} color={colors.textMuted} />
+                </TouchableOpacity>
+
+                {/* Location-based booking notice */}
+                {selectedLibrary && locationStatus !== 'in_range' && (
+                    <View style={[styles.locationNotice, { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }]}>
+                        <MaterialIcons name="location-off" size={18} color="#d97706" />
+                        <Text style={styles.locationNoticeText}>
+                            You're not within {selectedLibrary.name}'s geofence. Move closer to book seats.
+                        </Text>
+                    </View>
+                )}
+
                 {/* Search Bar & Hero */}
                 <View style={styles.heroSection}>
                     {!activeBooking ? (
@@ -546,6 +597,56 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 5,
+    },
+    libraryBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginTop: 8,
+        marginBottom: 16,
+        padding: 14,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        gap: 12,
+    },
+    libraryBannerIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    libraryBannerContent: {
+        flex: 1,
+    },
+    libraryBannerLabel: {
+        fontFamily: 'Inter_400Regular',
+        fontSize: 11,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 2,
+    },
+    libraryBannerName: {
+        fontFamily: 'Inter_500Medium',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    locationNotice: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginBottom: 16,
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        gap: 10,
+    },
+    locationNoticeText: {
+        flex: 1,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 12,
+        color: '#92400e',
+        lineHeight: 16,
     },
 });
 

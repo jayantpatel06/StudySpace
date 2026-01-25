@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, Alert, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useLocation } from '../context/LocationContext';
 import { useBooking } from '../context/BookingContext';
 import { useTheme } from '../context/ThemeContext';
+import { useLibrary } from '../context/LibraryContext';
 import { useToast } from '../components/Toast';
 import { successNotification, lightImpact, selectionChanged } from '../utils/haptics';
 
@@ -19,22 +20,43 @@ const amenities = [
 const SeatDetailsScreen = ({ route }) => {
     const navigation = useNavigation();
     const { seatId } = route.params || { seatId: 'A-42' }; // Default for dev
-    const { locationStatus, refreshLocation } = useLocation();
+    const { locationStatus, refreshLocation, setTargetLibrary, distanceToLibrary } = useLocation();
     const { createBooking } = useBooking();
     const { colors, isDark } = useTheme();
+    const { selectedLibrary } = useLibrary();
     const { showSuccess, showError } = useToast();
 
     const [duration, setDuration] = useState(120); // minutes
 
+    // Sync library and refresh location when screen mounts
+    useEffect(() => {
+        if (selectedLibrary) {
+            // setTargetLibrary already calls refreshLocation internally
+            setTargetLibrary(selectedLibrary);
+        }
+    }, [selectedLibrary?.id]); // Only trigger when library ID changes
+
     const handleBooking = async () => {
+        // First refresh location to get latest status
+        if (selectedLibrary) {
+            await refreshLocation(selectedLibrary);
+        }
+
         if (locationStatus !== 'in_range') {
-            showError('You must be within the library range to book a seat.');
+            const distanceMsg = distanceToLibrary 
+                ? `You are ${distanceToLibrary}m away. ` 
+                : '';
+            const radiusMsg = selectedLibrary 
+                ? `You need to be within ${selectedLibrary.radius_meters || 100}m of ${selectedLibrary.name}.`
+                : 'Please select a library first.';
+            showError(`${distanceMsg}${radiusMsg}`);
             return;
         }
 
         try {
             successNotification();
-            await createBooking(seatId, duration, '2nd Floor • Silent Zone');
+            const location = selectedLibrary ? selectedLibrary.name : '2nd Floor • Silent Zone';
+            await createBooking(seatId, duration, location);
             showSuccess(`Booking Confirmed for Seat ${seatId}`);
             navigation.navigate('Bookings');
         } catch (err) {
@@ -102,14 +124,18 @@ const SeatDetailsScreen = ({ route }) => {
                             <Text style={[styles.warningSubtitle, { color: colors.textSecondary }]}>
                                 {locationStatus === 'unknown'
                                     ? 'Please wait while we verify your location.'
-                                    : 'Move closer to the library (<100m) to book.'}
+                                    : distanceToLibrary && selectedLibrary
+                                        ? `You are ${distanceToLibrary}m away. Need to be within ${selectedLibrary.radius_meters || 100}m.`
+                                        : selectedLibrary 
+                                            ? `Move closer to ${selectedLibrary.name} to book.`
+                                            : 'Please select a library first.'}
                             </Text>
                         </View>
                         <TouchableOpacity
                             style={[styles.retryLocationButton, { backgroundColor: colors.error }]}
                             onPress={() => {
                                 lightImpact();
-                                refreshLocation();
+                                refreshLocation(selectedLibrary);
                             }}
                         >
                             <MaterialIcons name="refresh" size={16} color="#fff" />

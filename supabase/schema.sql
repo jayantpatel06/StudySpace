@@ -6,6 +6,7 @@
 -- ============================================
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
+    clerk_id VARCHAR(255) UNIQUE,  -- Clerk user ID for authentication sync
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE,
     department VARCHAR(100),
@@ -13,9 +14,13 @@ CREATE TABLE IF NOT EXISTS users (
     points INTEGER DEFAULT 0,
     streak INTEGER DEFAULT 0,
     total_focus_time INTEGER DEFAULT 0, -- in minutes
+    last_login_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Index for clerk_id lookups
+CREATE INDEX IF NOT EXISTS idx_users_clerk_id ON users(clerk_id);
 
 -- ============================================
 -- SEATS TABLE

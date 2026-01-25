@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocation } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useLibrary } from '../context/LibraryContext';
 
 const ProfileScreen = () => {
     const {
@@ -15,8 +16,15 @@ const ProfileScreen = () => {
     } = useLocation();
     const { colors } = useTheme();
     const { userInfo, signOut } = useAuth();
+    const { selectedLibrary } = useLibrary();
 
     const isInRange = locationStatus === 'in_range';
+
+    const handleRefreshLocation = () => {
+        if (selectedLibrary) {
+            refreshLocation(selectedLibrary);
+        }
+    };
 
     const handleLogout = async () => {
         Alert.alert(
@@ -51,17 +59,23 @@ const ProfileScreen = () => {
 
                 <View style={styles.statsRow}>
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: colors.primary }]}>0</Text>
+                        <Text style={[styles.statValue, { color: colors.primary }]}>
+                            {userInfo?.points || 0}
+                        </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Points</Text>
                     </View>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: colors.primary }]}>--</Text>
-                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rank</Text>
+                        <Text style={[styles.statValue, { color: colors.primary }]}>
+                            {userInfo?.streak || 0}🔥
+                        </Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Streak</Text>
                     </View>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
                     <View style={styles.statItem}>
-                        <Text style={[styles.statValue, { color: colors.primary }]}>0h</Text>
+                        <Text style={[styles.statValue, { color: colors.primary }]}>
+                            {Math.round((userInfo?.totalFocusTime || 0) / 60)}h
+                        </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Focus Time</Text>
                     </View>
                 </View>
@@ -90,11 +104,11 @@ const ProfileScreen = () => {
                                 </Text>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={refreshLocation} disabled={isLoading}>
+                        <TouchableOpacity onPress={handleRefreshLocation} disabled={isLoading || !selectedLibrary}>
                             <MaterialIcons
                                 name="refresh"
                                 size={24}
-                                color={isLoading ? colors.textMuted : colors.primary}
+                                color={isLoading || !selectedLibrary ? colors.textMuted : colors.primary}
                             />
                         </TouchableOpacity>
                     </View>

@@ -9,6 +9,8 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
+import { useLibrary } from '../context/LibraryContext';
+import { useLocation } from '../context/LocationContext';
 import { selectionChanged, lightImpact } from '../utils/haptics';
 import SeatBottomSheet from '../components/SeatBottomSheet';
 import { SkeletonMapGrid } from '../components/SkeletonLoader';
@@ -111,6 +113,8 @@ const AnimatedSeat = ({ item, isSelected, onPress, colors }) => {
 
 const SeatMapScreen = ({ navigation }) => {
     const { colors, isDark } = useTheme();
+    const { selectedLibrary } = useLibrary();
+    const { locationStatus, setTargetLibrary, refreshLocation, userLocation, distanceToLibrary } = useLocation();
     const [selectedSeat, setSelectedSeat] = useState(null);
     const [currentFloor, setCurrentFloor] = useState('Floor 1');
     const [zoom, setZoom] = useState(1);
@@ -119,6 +123,14 @@ const SeatMapScreen = ({ navigation }) => {
     const [seatsData, setSeatsData] = useState([]);
     const [apiError, setApiError] = useState(null);
     const [isLive, setIsLive] = useState(false);
+
+    // Sync selected library with location context and refresh location
+    useEffect(() => {
+        if (selectedLibrary) {
+            // setTargetLibrary already calls refreshLocation internally
+            setTargetLibrary(selectedLibrary);
+        }
+    }, [selectedLibrary?.id]); // Only trigger when library ID changes
 
     // Fetch seats from API
     const fetchSeats = useCallback(async () => {
@@ -247,11 +259,40 @@ const SeatMapScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
                     <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Library Seat Map</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    {selectedLibrary ? selectedLibrary.name : 'Library Seat Map'}
+                </Text>
                 <TouchableOpacity style={styles.headerButton}>
                     <MaterialIcons name="info" size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
             </View>
+
+            {/* Library Selection Warning */}
+            {!selectedLibrary && (
+                <TouchableOpacity
+                    style={[styles.libraryWarning, { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }]}
+                    onPress={() => navigation.navigate('LibrarySelection')}
+                >
+                    <MaterialIcons name="warning" size={20} color="#d97706" />
+                    <Text style={styles.libraryWarningText}>
+                        Please select a library first to view and book seats
+                    </Text>
+                    <MaterialIcons name="chevron-right" size={20} color="#d97706" />
+                </TouchableOpacity>
+            )}
+
+            {/* Location Warning */}
+            {selectedLibrary && locationStatus !== 'in_range' && (
+                <TouchableOpacity 
+                    style={[styles.locationWarning, { backgroundColor: '#fee2e2', borderColor: '#ef4444' }]}
+                    onPress={() => refreshLocation(selectedLibrary)}
+                >
+                    <MaterialIcons name="location-off" size={18} color="#dc2626" />
+                    <Text style={styles.locationWarningText}>
+                        You are {distanceToLibrary ? `${distanceToLibrary}m` : 'not'} from {selectedLibrary.name} (required: within {selectedLibrary.radius_meters || 100}m). Tap to refresh.
+                    </Text>
+                </TouchableOpacity>
+            )}
 
             {/* Floor Selection */}
             <View style={[styles.floorSelection, { backgroundColor: colors.background }]}>
@@ -706,6 +747,40 @@ const styles = StyleSheet.create({
     retryButtonText: {
         color: '#fff',
         fontWeight: '600',
+    },
+    libraryWarning: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginTop: 8,
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        gap: 10,
+    },
+    libraryWarningText: {
+        flex: 1,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 13,
+        color: '#92400e',
+        lineHeight: 18,
+    },
+    locationWarning: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginTop: 8,
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        gap: 10,
+    },
+    locationWarningText: {
+        flex: 1,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 12,
+        color: '#dc2626',
+        lineHeight: 16,
     },
 });
 
