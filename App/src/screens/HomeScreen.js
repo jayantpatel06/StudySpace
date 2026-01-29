@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useLocation } from '../context/LocationContext';
@@ -13,6 +14,7 @@ import { lightImpact } from '../utils/haptics';
 
 const HomeScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const { locationStatus, setTargetLibrary, refreshLocation, distanceToLibrary } = useLocation();
     const { activeBooking, cancelBooking, completeBooking } = useBooking();
     const { colors, isDark } = useTheme();
@@ -103,7 +105,7 @@ const HomeScreen = () => {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <OfflineIndicator />
-            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 80 + insets.bottom }}>
                 {/* Library Selection Banner */}
                 <TouchableOpacity
                     style={[styles.libraryBanner, {
@@ -115,13 +117,13 @@ const HomeScreen = () => {
                         navigation.navigate('LibrarySelection');
                     }}
                 >
-                    <View style={[styles.libraryBannerIcon, { 
-                        backgroundColor: selectedLibrary ? colors.primary : colors.surfaceSecondary 
+                    <View style={[styles.libraryBannerIcon, {
+                        backgroundColor: selectedLibrary ? colors.primary : colors.surfaceSecondary
                     }]}>
-                        <MaterialIcons 
-                            name="local-library" 
-                            size={20} 
-                            color={selectedLibrary ? '#fff' : colors.textMuted} 
+                        <MaterialIcons
+                            name="local-library"
+                            size={20}
+                            color={selectedLibrary ? '#fff' : colors.textMuted}
                         />
                     </View>
                     <View style={styles.libraryBannerContent}>

@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
 const RewardsScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
                     <MaterialIcons name="arrow-back-ios-new" size={24} color="#64748b" />
                 </TouchableOpacity>
@@ -128,7 +130,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        paddingTop: 48,
         paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#e2e8f0',

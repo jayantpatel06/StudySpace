@@ -30,7 +30,7 @@ export const LibraryProvider = ({ children }) => {
     const fetchLibraries = async () => {
         setIsLoading(true);
         setError(null);
-        
+
         try {
             const { data, error: fetchError } = await supabase
                 .from('libraries')
@@ -42,6 +42,13 @@ export const LibraryProvider = ({ children }) => {
                 console.error('Error fetching libraries:', fetchError);
                 setError('Failed to load libraries');
                 return;
+            }
+
+            // Debug: log what we get from database
+            if (data && data.length > 0) {
+                data.forEach(lib => {
+                    console.log(`[LibraryContext] "${lib.name}" - radius_meters:`, lib.radius_meters, 'type:', typeof lib.radius_meters);
+                });
             }
 
             setLibraries(data || []);
@@ -68,7 +75,7 @@ export const LibraryProvider = ({ children }) => {
         // Use Supabase user ID (numeric) for database relations
         const supabaseUserId = userInfo?.id;
         const clerkId = userInfo?.clerkId;
-        
+
         if (!supabaseUserId || !selectedLibrary?.id) return;
 
         try {
@@ -101,7 +108,7 @@ export const LibraryProvider = ({ children }) => {
         try {
             setSelectedLibrary(null);
             await AsyncStorage.removeItem(SELECTED_LIBRARY_KEY);
-            
+
             // Use Supabase user ID for database operations
             const supabaseUserId = userInfo?.id;
             if (supabaseUserId) {

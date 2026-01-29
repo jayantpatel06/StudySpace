@@ -46,15 +46,32 @@ export const fetchLibrariesFromDB = async () => {
 
         if (data && data.length > 0) {
             // Transform to match expected format
-            cachedLibraries = data.map(lib => ({
-                id: lib.id.toString(),
-                name: lib.name,
-                latitude: parseFloat(lib.latitude),
-                longitude: parseFloat(lib.longitude),
-                radiusMeters: lib.radius_meters || 100,
-                address: lib.address,
-                totalSeats: lib.total_seats,
-            }));
+            cachedLibraries = data.map(lib => {
+                // Debug: log what we get from database
+                console.log(`Library "${lib.name}" - radius_meters from DB:`, lib.radius_meters, typeof lib.radius_meters);
+
+                // Parse radius - handle null, undefined, string, or number
+                let radiusMeters = 300; // Default fallback
+                if (lib.radius_meters !== null && lib.radius_meters !== undefined) {
+                    const parsed = parseInt(lib.radius_meters, 10);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        radiusMeters = parsed;
+                    }
+                }
+
+                console.log(`Library "${lib.name}" - using radiusMeters:`, radiusMeters);
+
+                return {
+                    id: lib.id.toString(),
+                    name: lib.name,
+                    latitude: parseFloat(lib.latitude),
+                    longitude: parseFloat(lib.longitude),
+                    radiusMeters: radiusMeters,
+                    radius_meters: radiusMeters, // Also set snake_case for consistency
+                    address: lib.address,
+                    totalSeats: lib.total_seats,
+                };
+            });
             cacheTimestamp = Date.now();
             return cachedLibraries;
         }
@@ -155,7 +172,7 @@ export const checkLibraryProximity = async (selectedLibrary = null) => {
             parseFloat(selectedLibrary.latitude),
             parseFloat(selectedLibrary.longitude)
         );
-        
+
         const radiusMeters = selectedLibrary.radius_meters || selectedLibrary.radiusMeters || 100;
         const inRange = distance <= radiusMeters;
 
@@ -169,7 +186,7 @@ export const checkLibraryProximity = async (selectedLibrary = null) => {
 
     // Otherwise check against all libraries
     const libraries = await fetchLibrariesFromDB();
-    
+
     let nearestLibrary = null;
     let minDistance = Infinity;
 

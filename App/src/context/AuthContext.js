@@ -114,21 +114,25 @@ export const AuthProvider = ({ children }) => {
 
     const getUserInfo = () => {
         if (!user) return null;
+
+        const hasSupabaseUser = !!supabaseUser;
         
         // Combine Clerk data with Supabase data
         return {
-            id: supabaseUser?.id || null,  // Supabase user ID for database relations
-            clerkId: user.id,               // Clerk ID for auth
+            // Supabase user ID for database relations (null if we haven't synced yet)
+            id: hasSupabaseUser ? supabaseUser.id : null,
+            // Clerk ID for auth
+            clerkId: user.id,
             email: user.primaryEmailAddress?.emailAddress,
             firstName: user.firstName,
             lastName: user.lastName,
             fullName: user.fullName,
             imageUrl: user.imageUrl,
-            // Supabase specific fields
-            points: supabaseUser?.points || 0,
-            streak: supabaseUser?.streak || 0,
-            totalFocusTime: supabaseUser?.total_focus_time || 0,
-            department: supabaseUser?.department,
+            // Supabase specific fields (null when Supabase user doesn't exist yet)
+            points: hasSupabaseUser ? (supabaseUser.points ?? 0) : null,
+            streak: hasSupabaseUser ? (supabaseUser.streak ?? 0) : null,
+            totalFocusTime: hasSupabaseUser ? (supabaseUser.total_focus_time ?? 0) : null,
+            department: hasSupabaseUser ? (supabaseUser.department ?? null) : null,
         };
     };
 
