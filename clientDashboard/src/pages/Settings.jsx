@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { supabase } from "../config/supabase";
 import toast from "react-hot-toast";
 
 export default function Settings() {
   const { library, client, updateLibrary } = useAuthStore();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("library");
+
+  // Set active tab from URL query parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'library' || tabParam === 'account') {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Library settings state
   const [librarySettings, setLibrarySettings] = useState({
@@ -129,13 +139,13 @@ export default function Settings() {
   ];
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900 font-display">
+        <h1 className="text-2xl font-bold text-slate-800 font-display">
           Settings
         </h1>
-        <p className="text-slate-500">
+        <p className="text-slate-600">
           Manage your library and account settings
         </p>
       </div>
@@ -146,11 +156,10 @@ export default function Settings() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              activeTab === tab.id
-                ? "bg-primary-600 text-white"
-                : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === tab.id
+              ? "bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] text-white shadow-lg"
+              : "glass text-slate-600 hover:text-slate-800 border border-white/30"
+              }`}
           >
             <svg
               className="w-5 h-5"
@@ -172,14 +181,14 @@ export default function Settings() {
 
       {/* Library Settings Tab */}
       {activeTab === "library" && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h3 className="font-semibold text-slate-900 mb-6">
+        <div className="glass rounded-2xl shadow-lg p-6">
+          <h3 className="font-semibold text-slate-800 mb-6">
             Library Information
           </h3>
 
           <div className="space-y-6 max-w-2xl">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-600 mb-2">
                 Library Name
               </label>
               <input
@@ -188,12 +197,12 @@ export default function Settings() {
                 onChange={(e) =>
                   handleLibrarySettingsChange("name", e.target.value)
                 }
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800 placeholder-slate-400"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-600 mb-2">
                 Address
               </label>
               <input
@@ -202,13 +211,13 @@ export default function Settings() {
                 onChange={(e) =>
                   handleLibrarySettingsChange("address", e.target.value)
                 }
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800 placeholder-slate-400"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-600 mb-2">
                   Opening Time
                 </label>
                 <input
@@ -217,11 +226,11 @@ export default function Settings() {
                   onChange={(e) =>
                     handleLibrarySettingsChange("opening_time", e.target.value)
                   }
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-600 mb-2">
                   Closing Time
                 </label>
                 <input
@@ -230,13 +239,13 @@ export default function Settings() {
                   onChange={(e) =>
                     handleLibrarySettingsChange("closing_time", e.target.value)
                   }
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-600 mb-2">
                 Geofence Radius (meters)
               </label>
               <input
@@ -245,7 +254,7 @@ export default function Settings() {
                 onChange={(e) =>
                   handleLibrarySettingsChange("radius_meters", e.target.value)
                 }
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800"
                 min="10"
                 max="5000"
               />
@@ -255,7 +264,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-600 mb-2">
                 Description
               </label>
               <textarea
@@ -264,7 +273,7 @@ export default function Settings() {
                   handleLibrarySettingsChange("description", e.target.value)
                 }
                 rows={4}
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
+                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800 resize-none"
               />
             </div>
 
@@ -272,7 +281,7 @@ export default function Settings() {
               <button
                 onClick={handleSaveLibrarySettings}
                 disabled={isLoading}
-                className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-purple-500/30"
               >
                 {isLoading ? (
                   <>
@@ -325,14 +334,14 @@ export default function Settings() {
       {activeTab === "account" && (
         <div className="space-y-6">
           {/* Account Info */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h3 className="font-semibold text-slate-900 mb-6">
+          <div className="glass rounded-2xl shadow-lg p-6">
+            <h3 className="font-semibold text-slate-800 mb-6">
               Account Information
             </h3>
 
             <div className="flex items-start gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary-700">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#5B8BD9] to-[#8B7FCF] flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">
                   {client?.name?.[0] || "U"}
                 </span>
               </div>
@@ -341,13 +350,13 @@ export default function Settings() {
                   <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                     Name
                   </p>
-                  <p className="font-medium text-slate-900">{client?.name}</p>
+                  <p className="font-medium text-slate-800">{client?.name}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                     Username
                   </p>
-                  <p className="font-medium text-slate-900">
+                  <p className="font-medium text-slate-800">
                     {client?.username}
                   </p>
                 </div>
@@ -356,7 +365,7 @@ export default function Settings() {
                     <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                       Email
                     </p>
-                    <p className="font-medium text-slate-900">{client.email}</p>
+                    <p className="font-medium text-slate-800">{client.email}</p>
                   </div>
                 )}
               </div>
@@ -364,14 +373,14 @@ export default function Settings() {
           </div>
 
           {/* Change Password */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <h3 className="font-semibold text-slate-900 mb-6">
+          <div className="glass rounded-2xl shadow-lg p-6">
+            <h3 className="font-semibold text-slate-800 mb-6">
               Change Password
             </h3>
 
             <div className="space-y-4 max-w-md">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-600 mb-2">
                   Current Password
                 </label>
                 <input
@@ -383,12 +392,12 @@ export default function Settings() {
                       currentPassword: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-600 mb-2">
                   New Password
                 </label>
                 <input
@@ -400,12 +409,12 @@ export default function Settings() {
                       newPassword: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-600 mb-2">
                   Confirm New Password
                 </label>
                 <input
@@ -417,7 +426,7 @@ export default function Settings() {
                       confirmPassword: e.target.value,
                     }))
                   }
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#5B8BD9] focus:border-transparent outline-none text-slate-800"
                 />
               </div>
 
@@ -425,7 +434,7 @@ export default function Settings() {
                 <button
                   onClick={handlePasswordChange}
                   disabled={isLoading}
-                  className="px-6 py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 disabled:opacity-50"
+                  className="px-6 py-3 bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50 shadow-lg"
                 >
                   {isLoading ? "Changing..." : "Change Password"}
                 </button>
@@ -434,8 +443,8 @@ export default function Settings() {
           </div>
 
           {/* Danger Zone */}
-          <div className="bg-white rounded-2xl shadow-sm border border-red-200 p-6">
-            <h3 className="font-semibold text-red-700 mb-2">Danger Zone</h3>
+          <div className="glass rounded-2xl shadow-lg border border-red-300 p-6">
+            <h3 className="font-semibold text-red-600 mb-2">Danger Zone</h3>
             <p className="text-sm text-slate-600 mb-4">
               Contact your administrator to delete your account or transfer
               library ownership.

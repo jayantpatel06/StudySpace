@@ -195,7 +195,12 @@ export const useLibraryStore = create((set, get) => ({
         .update({ capacity: rows * columns })
         .eq("id", roomId);
 
-      await get().fetchSeats(libraryId, roomId);
+      // Merge new seats with existing seats (instead of replacing all)
+      // First, remove any old seats for this room, then add the new ones
+      const existingSeats = get().seats;
+      const seatsFromOtherRooms = existingSeats.filter(s => s.room_id !== roomId);
+      set({ seats: [...seatsFromOtherRooms, ...data] });
+
       return { data, error: null };
     } catch (error) {
       return { data: null, error: error.message };
@@ -319,10 +324,10 @@ export const useLibraryStore = create((set, get) => ({
         occupancyRate:
           seats.length > 0
             ? Math.round(
-                (seats.filter((s) => s.status === "occupied").length /
-                  seats.filter((s) => s.is_active !== false).length) *
-                  100,
-              )
+              (seats.filter((s) => s.status === "occupied").length /
+                seats.filter((s) => s.is_active !== false).length) *
+              100,
+            )
             : 0,
       };
 

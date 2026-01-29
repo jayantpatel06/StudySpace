@@ -617,21 +617,21 @@ export default function SeatManagement() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-display">
+          <h1 className="text-2xl font-bold text-slate-800 font-display">
             Seat Management
           </h1>
-          <p className="text-slate-500">
+          <p className="text-slate-600">
             Configure floors, rooms, and seat layouts
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => setShowAddFloor(true)}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-700 font-medium hover:bg-slate-50 flex items-center gap-2"
+            className="px-4 py-2.5 glass border border-slate-200 rounded-xl text-slate-600 font-medium hover:text-slate-800 hover:bg-white/30 flex items-center gap-2"
           >
             <svg
               className="w-5 h-5"
@@ -650,7 +650,7 @@ export default function SeatManagement() {
           </button>
           <button
             onClick={() => setShowAddRoom(true)}
-            className="px-4 py-2.5 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 flex items-center gap-2"
+            className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 flex items-center gap-2 shadow-lg shadow-purple-500/30 disabled:opacity-50"
             disabled={floors.length === 0}
           >
             <svg
@@ -673,7 +673,7 @@ export default function SeatManagement() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
               <svg
@@ -692,13 +692,13 @@ export default function SeatManagement() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Total Floors</p>
-              <p className="text-2xl font-bold text-slate-900">
+              <p className="text-2xl font-bold text-slate-800">
                 {floors.length}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
               <svg
@@ -717,13 +717,13 @@ export default function SeatManagement() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Total Rooms</p>
-              <p className="text-2xl font-bold text-slate-900">
+              <p className="text-2xl font-bold text-slate-800">
                 {rooms.length}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
               <svg
@@ -742,7 +742,7 @@ export default function SeatManagement() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Total Seats</p>
-              <p className="text-2xl font-bold text-slate-900">
+              <p className="text-2xl font-bold text-slate-800">
                 {seats.length}
               </p>
             </div>
@@ -752,9 +752,9 @@ export default function SeatManagement() {
 
       {/* Empty State */}
       {floors.length === 0 && (
-        <div className="bg-white rounded-2xl p-12 shadow-sm border border-slate-100 text-center">
+        <div className="glass rounded-2xl p-12 shadow-lg text-center">
           <svg
-            className="w-16 h-16 text-slate-300 mx-auto mb-4"
+            className="w-16 h-16 text-slate-400 mx-auto mb-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -766,7 +766,7 @@ export default function SeatManagement() {
               d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
             />
           </svg>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">
             No floors configured
           </h3>
           <p className="text-slate-500 mb-6">
@@ -775,7 +775,7 @@ export default function SeatManagement() {
           </p>
           <button
             onClick={() => setShowAddFloor(true)}
-            className="px-6 py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700"
+            className="px-6 py-3 bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] text-white rounded-xl font-medium hover:opacity-90 shadow-lg"
           >
             Add Your First Floor
           </button>
@@ -792,21 +792,21 @@ export default function SeatManagement() {
             return (
               <div
                 key={floor.id}
-                className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
+                className="glass rounded-2xl shadow-lg overflow-hidden"
               >
                 {/* Floor Header */}
                 <div
-                  className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50"
+                  className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-white/30"
                   onClick={() => toggleFloor(floor.id)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-700 font-bold">
+                      <span className="text-blue-600 font-bold">
                         {floor.floor_number}
                       </span>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-slate-900">
+                      <h3 className="font-semibold text-slate-800">
                         Floor {floor.floor_number}
                         {floor.floor_name && (
                           <span className="text-slate-500 font-normal ml-2">
@@ -825,7 +825,7 @@ export default function SeatManagement() {
                         e.stopPropagation();
                         handleDeleteFloor(floor);
                       }}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg"
                     >
                       <svg
                         className="w-5 h-5"
@@ -859,13 +859,13 @@ export default function SeatManagement() {
 
                 {/* Rooms */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100">
+                  <div className="border-t border-slate-200/50">
                     {floorRooms.length === 0 ? (
                       <div className="p-6 text-center text-slate-500">
                         <p>No rooms on this floor yet</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-slate-100">
+                      <div className="divide-y divide-slate-200/50">
                         {floorRooms.map((room) => {
                           const roomSeats = getRoomSeats(room.id);
                           return (
@@ -873,12 +873,12 @@ export default function SeatManagement() {
                               <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                                    <span className="text-purple-700 font-semibold text-sm">
+                                    <span className="text-purple-600 font-semibold text-sm">
                                       {room.room_code || room.room_name[0]}
                                     </span>
                                   </div>
                                   <div>
-                                    <h4 className="font-medium text-slate-900">
+                                    <h4 className="font-medium text-slate-800">
                                       {room.room_name}
                                     </h4>
                                     <p className="text-xs text-slate-500">
@@ -893,7 +893,7 @@ export default function SeatManagement() {
                                       setSelectedRoom(room);
                                       setShowCreateSeats(true);
                                     }}
-                                    className="px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg text-sm font-medium hover:bg-primary-100"
+                                    className="px-3 py-1.5 bg-[#5B8BD9]/20 text-[#5B8BD9] rounded-lg text-sm font-medium hover:bg-[#5B8BD9]/30 border border-[#5B8BD9]/30"
                                   >
                                     {roomSeats.length > 0
                                       ? "Reconfigure"
@@ -901,7 +901,7 @@ export default function SeatManagement() {
                                   </button>
                                   <button
                                     onClick={() => handleDeleteRoom(room)}
-                                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/20 rounded-lg"
                                   >
                                     <svg
                                       className="w-4 h-4"
@@ -940,8 +940,8 @@ export default function SeatManagement() {
 
       {/* Legend */}
       {seats.length > 0 && (
-        <div className="mt-6 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h4 className="font-medium text-slate-900 mb-3">Seat Legend</h4>
+        <div className="mt-6 glass rounded-2xl p-6 shadow-lg">
+          <h4 className="font-medium text-slate-800 mb-3">Seat Legend</h4>
           <div className="flex flex-wrap gap-6">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded bg-green-100 border-2 border-green-500"></div>
@@ -961,7 +961,7 @@ export default function SeatManagement() {
             </div>
             <div className="flex items-center gap-2">
               <svg
-                className="w-4 h-4 text-slate-600"
+                className="w-4 h-4 text-yellow-500"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
