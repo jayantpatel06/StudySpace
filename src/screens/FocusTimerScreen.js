@@ -1,10 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, Animated as RNAnimated } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, Animated as RNAnimated, Alert, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useBooking } from '../context/BookingContext';
+import { recordFocusSession } from '../services/api';
 import { successNotification, lightImpact } from '../utils/haptics';
+import { useToast } from '../components/Toast';
 
 // Simple Confetti Component
 const Confetti = ({ visible }) => {
@@ -56,16 +61,55 @@ const Confetti = ({ visible }) => {
 const FocusTimerScreen = () => {
     const navigation = useNavigation();
     const { colors, isDark } = useTheme();
+    const insets = useSafeAreaInsets();
+    const { userInfo, refreshUserData } = useAuth();
+    const { activeBooking } = useBooking();
+    const { showToast } = useToast();
 
     // Timer states
     const WORK_DURATION = 25 * 60; // 25 minutes
     const BREAK_DURATION = 5 * 60; // 5 minutes
+    const POINTS_PER_SESSION = 50; // Points earned per completed work session
 
     const [secondsLeft, setSecondsLeft] = useState(WORK_DURATION);
-    const [isPaused, setIsPaused] = useState(false);
+    const [isPaused, setIsPaused] = useState(true); // Start paused so user can start when ready
     const [isBreak, setIsBreak] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
-    const [completedBlocks, setCompletedBlocks] = useState(3);
+    const [completedBlocks, setCompletedBlocks] = useState(0);
+    const [sessionPoints, setSessionPoints] = useState(0);
+    const [isRecording, setIsRecording] = useState(false);
+
+    // Record focus session to database
+    const recordSession = useCallback(async (durationMinutes) => {
+        if (!userInfo?.id) {
+            console.warn('Cannot record focus session: no user ID');
+            return;
+        }
+
+        setIsRecording(true);
+        try {
+            const { data, error } = await recordFocusSession(
+                userInfo.id,
+                durationMinutes,
+                POINTS_PER_SESSION
+            );
+
+            if (error) {
+                console.error('Failed to record focus session:', error);
+                showToast('Failed to save session', 'error');
+            } else {
+                console.log('Focus session recorded:', data);
+                setSessionPoints(prev => prev + POINTS_PER_SESSION);
+                showToast(`+${POINTS_PER_SESSION} points earned! 🎉`, 'success');
+                // Refresh user data to update points in header/profile
+                await refreshUserData();
+            }
+        } catch (error) {
+            console.error('Error recording focus session:', error);
+        } finally {
+            setIsRecording(false);
+        }
+    }, [userInfo?.id, refreshUserData, showToast]);
 
     useEffect(() => {
         if (isPaused || secondsLeft <= 0) {
@@ -74,9 +118,13 @@ const FocusTimerScreen = () => {
                 successNotification();
 
                 if (!isBreak) {
-                    // Work phase completed - show confetti and switch to break
+                    // Work phase completed - show confetti, record session, switch to break
                     setShowConfetti(true);
                     setCompletedBlocks(prev => prev + 1);
+
+                    // Record the focus session to database
+                    recordSession(WORK_DURATION / 60);
+
                     setTimeout(() => {
                         setShowConfetti(false);
                         setIsBreak(true);
@@ -94,7 +142,7 @@ const FocusTimerScreen = () => {
             setSecondsLeft(prev => Math.max(0, prev - 1));
         }, 1000);
         return () => clearInterval(interval);
-    }, [isPaused, secondsLeft, isBreak]);
+    }, [isPaused, secondsLeft, isBreak, recordSession]);
 
     const formatTime = (totalSeconds) => {
         const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -133,27 +181,33 @@ const FocusTimerScreen = () => {
             <Confetti visible={showConfetti} />
 
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: colors.headerBg }]}>
+            <View style={[styles.header, { backgroundColor: colors.headerBg, paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity onPress={handleLeave} style={styles.headerButton}>
                     <MaterialIcons name="arrow-back-ios-new" size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Library Room 402</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    {activeBooking?.location || 'Focus Session'}
+                </Text>
                 <View style={[styles.headerButton, styles.lightModeButton, { backgroundColor: colors.primaryLight }]}>
                     <MaterialIcons name={isBreak ? "local-cafe" : "timer"} size={24} color={colors.primary} />
                 </View>
             </View>
 
             {/* Content */}
-            <View style={styles.content}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[styles.contentContainer, { paddingBottom: 40 + insets.bottom }]}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Live Indicators */}
                 <View style={[styles.liveIndicator, { backgroundColor: isBreak ? 'rgba(34, 197, 94, 0.1)' : colors.primaryLight }]}>
                     <View style={[styles.liveDot, { backgroundColor: isBreak ? colors.success : colors.primary }]} />
                     <Text style={[styles.liveText, { color: isBreak ? colors.success : colors.primary }]}>
-                        {isBreak ? 'Break Time' : 'Live Session'}
+                        {isBreak ? 'Break Time' : (isPaused ? 'Paused' : 'Live Session')}
                     </Text>
                 </View>
                 <Text style={[styles.sessionTitle, { color: colors.text }]}>
-                    {isBreak ? 'Take a break! 🧘' : 'Exam Prep - Biology'}
+                    {isBreak ? 'Take a break! 🧘' : (activeBooking ? `Seat ${activeBooking.seatId}` : 'Focus Mode')}
                 </Text>
 
                 {/* Timer */}
@@ -210,13 +264,19 @@ const FocusTimerScreen = () => {
                     <View style={styles.progressHeader}>
                         <View>
                             <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Session Progress</Text>
-                            <Text style={[styles.progressValue, { color: colors.text }]}>{completedBlocks} of 4 Focus Blocks</Text>
+                            <Text style={[styles.progressValue, { color: colors.text }]}>{completedBlocks} Focus Block{completedBlocks !== 1 ? 's' : ''} Done</Text>
                         </View>
-                        <Text style={[styles.progressPercent, { color: colors.primary }]}>{Math.round((completedBlocks / 4) * 100)}%</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={[styles.progressPercent, { color: colors.primary }]}>+{sessionPoints}</Text>
+                            <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Points</Text>
+                        </View>
                     </View>
                     <View style={[styles.progressBarBg, { backgroundColor: colors.surfaceSecondary }]}>
-                        <View style={[styles.progressBarFill, { width: `${(completedBlocks / 4) * 100}%`, backgroundColor: colors.primary }]} />
+                        <View style={[styles.progressBarFill, { width: `${Math.min((completedBlocks / 4) * 100, 100)}%`, backgroundColor: colors.primary }]} />
                     </View>
+                    {isRecording && (
+                        <Text style={[styles.savingText, { color: colors.textMuted }]}>Saving session...</Text>
+                    )}
                 </View>
 
                 {/* Controls */}
@@ -236,8 +296,8 @@ const FocusTimerScreen = () => {
                         <Text style={[styles.leaveButtonText, { color: colors.textSecondary }]}>Leave</Text>
                     </TouchableOpacity>
                 </View>
-            </View>
-        </View>
+            </ScrollView>
+        </View >
     );
 }
 
@@ -251,7 +311,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
-        paddingTop: 48,
         backgroundColor: 'rgba(255, 255, 255, 0.8)',
     },
     headerButton: {
@@ -269,8 +328,10 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#202124',
     },
-    content: {
+    scrollView: {
         flex: 1,
+    },
+    contentContainer: {
         paddingHorizontal: 24,
         paddingVertical: 16,
         alignItems: 'center',
@@ -435,6 +496,12 @@ const styles = StyleSheet.create({
     leaveButtonText: {
         color: '#64748b',
         fontWeight: '700',
+    },
+    savingText: {
+        fontSize: 12,
+        marginTop: 8,
+        textAlign: 'right',
+        fontStyle: 'italic',
     },
 });
 

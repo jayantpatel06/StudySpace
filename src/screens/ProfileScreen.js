@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, Linking, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocation } from '../context/LocationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLibrary } from '../context/LibraryContext';
+import { useNotifications } from '../hooks/useOffline';
 
 const ProfileScreen = () => {
     const {
@@ -13,17 +15,97 @@ const ProfileScreen = () => {
         nearestLibrary,
         refreshLocation,
         isLoading,
+        permissionGranted,
     } = useLocation();
     const { colors } = useTheme();
     const { userInfo, signOut } = useAuth();
     const { selectedLibrary } = useLibrary();
+    const { hasPermission: hasNotificationPermission } = useNotifications();
+    const insets = useSafeAreaInsets();
 
     const isInRange = locationStatus === 'in_range';
+
+    const displayName = userInfo?.fullName || userInfo?.firstName || 'Guest';
+    const email = userInfo?.email || '';
+    const avatarUrl = userInfo?.imageUrl;
+    const points = userInfo?.points;
+    const streak = userInfo?.streak;
+    const focusHours = typeof userInfo?.totalFocusTime === 'number'
+        ? Math.round(userInfo.totalFocusTime / 60)
+        : null;
+
+    const getInitials = () => {
+        if (!userInfo) return 'G';
+        const first = userInfo.firstName?.[0] || '';
+        const last = userInfo.lastName?.[0] || '';
+        const initials = (first + last).toUpperCase();
+        return initials || 'U';
+    };
 
     const handleRefreshLocation = () => {
         if (selectedLibrary) {
             refreshLocation(selectedLibrary);
         }
+    };
+
+    const handleOpenLocationSettings = () => {
+        if (Linking.openSettings) {
+            Linking.openSettings();
+        }
+    };
+
+    const handleNotificationToggle = async (value) => {
+        if (value) {
+            // User wants to enable notifications
+            if (!hasNotificationPermission) {
+                Alert.alert(
+                    'Enable Notifications',
+                    'To receive booking reminders and focus session updates, please enable notifications in your device settings.',
+                    [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                            text: 'Open Settings',
+                            onPress: () => {
+                                if (Linking.openSettings) {
+                                    Linking.openSettings();
+                                }
+                            },
+                        },
+                    ]
+                );
+            }
+        } else {
+            // User wants to disable notifications
+            Alert.alert(
+                'Disable Notifications',
+                'To disable notifications, please go to your device settings.',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Open Settings',
+                        onPress: () => {
+                            if (Linking.openSettings) {
+                                Linking.openSettings();
+                            }
+                        },
+                    },
+                ]
+            );
+        }
+    };
+
+    const handlePrivacyPress = () => {
+        Alert.alert(
+            'Privacy & Security',
+            'Privacy and security controls will be available in a future update.'
+        );
+    };
+
+    const handleHelpPress = () => {
+        Alert.alert(
+            'Help & Support',
+            'For help, please contact your library staff or administrator.'
+        );
     };
 
     const handleLogout = async () => {
@@ -36,45 +118,71 @@ const ProfileScreen = () => {
                     text: 'Log Out',
                     style: 'destructive',
                     onPress: async () => {
-                        await signOut();
+                        try {
+                            await signOut();
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            Alert.alert('Error', 'Failed to log out. Please try again.');
+                        }
                     }
                 },
             ]
         );
     };
 
+    const locationSubtitle = !permissionGranted
+        ? 'Location permission is turned off. Open settings to enable.'
+        : distanceToLibrary
+            ? `${Math.round(distanceToLibrary)}m from ${nearestLibrary?.name || 'library'}`
+            : locationStatus === 'unknown'
+                ? 'Checking location...'
+                : 'GPS location';
+
+    const isRefreshDisabled = permissionGranted ? (isLoading || !selectedLibrary) : false;
+
     return (
-        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView
+            style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}
+            contentContainerStyle={{ paddingBottom: 80 + insets.bottom }}
+        >
             <View style={[styles.profileHeader, { borderBottomColor: colors.border }]}>
-                <Image
-                    source={{ uri: userInfo?.imageUrl || 'https://via.placeholder.com/96' }}
-                    style={styles.avatar}
-                />
+                <View style={styles.avatar}>
+                    {avatarUrl ? (
+                        <Image
+                            source={{ uri: avatarUrl }}
+                            style={styles.avatarImage}
+                        />
+                    ) : (
+                        <View style={[styles.avatarFallback, { backgroundColor: colors.primary }]}>
+                            <Text style={styles.avatarInitials}>{getInitials()}</Text>
+                        </View>
+                    )}
+                </View>
                 <Text style={[styles.name, { color: colors.text }]}>
-                    {userInfo?.fullName || 'User'}
+                    {displayName}
                 </Text>
                 <Text style={[styles.department, { color: colors.textSecondary }]}>
-                    {userInfo?.email || ''}
+                    {email}
                 </Text>
 
                 <View style={styles.statsRow}>
                     <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: colors.primary }]}>
-                            {userInfo?.points || 0}
+                            {points != null ? points : '--'}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Points</Text>
                     </View>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
                     <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: colors.primary }]}>
-                            {userInfo?.streak || 0}🔥
+                            {streak != null ? `${streak}🔥` : '--'}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Streak</Text>
                     </View>
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
                     <View style={styles.statItem}>
                         <Text style={[styles.statValue, { color: colors.primary }]}>
-                            {Math.round((userInfo?.totalFocusTime || 0) / 60)}h
+                            {focusHours != null ? `${focusHours}h` : '--'}
                         </Text>
                         <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Focus Time</Text>
                     </View>
@@ -97,18 +205,22 @@ const ProfileScreen = () => {
                                     {isInRange ? 'In Library Range' : 'Outside Library'}
                                 </Text>
                                 <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>
-                                    {distanceToLibrary
-                                        ? `${Math.round(distanceToLibrary)}m from ${nearestLibrary?.name || 'library'}`
-                                        : locationStatus === 'unknown' ? 'Checking location...' : 'GPS location'
-                                    }
+                                    {locationSubtitle}
                                 </Text>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={handleRefreshLocation} disabled={isLoading || !selectedLibrary}>
+                        <TouchableOpacity
+                            onPress={permissionGranted ? handleRefreshLocation : handleOpenLocationSettings}
+                            disabled={isRefreshDisabled}
+                        >
                             <MaterialIcons
-                                name="refresh"
+                                name={permissionGranted ? 'refresh' : 'settings'}
                                 size={24}
-                                color={isLoading || !selectedLibrary ? colors.textMuted : colors.primary}
+                                color={
+                                    permissionGranted
+                                        ? (isRefreshDisabled ? colors.textMuted : colors.primary)
+                                        : colors.primary
+                                }
                             />
                         </TouchableOpacity>
                     </View>
@@ -116,21 +228,35 @@ const ProfileScreen = () => {
 
                 <Text style={[styles.sectionTitle, { marginTop: 24, color: colors.textSecondary }]}>Account</Text>
                 <View style={[styles.card, { backgroundColor: colors.surface }]}>
-                    <TouchableOpacity style={styles.menuRow}>
+                    <View style={styles.menuRow}>
                         <View style={styles.menuLeft}>
-                            <MaterialIcons name="notifications" size={24} color={colors.textSecondary} />
-                            <Text style={[styles.menuText, { color: colors.text }]}>Notifications</Text>
+                            <MaterialIcons
+                                name={hasNotificationPermission ? "notifications-active" : "notifications-off"}
+                                size={24}
+                                color={hasNotificationPermission ? colors.primary : colors.textSecondary}
+                            />
+                            <View>
+                                <Text style={[styles.menuText, { color: colors.text }]}>Notifications</Text>
+                                <Text style={[styles.menuSubtext, { color: colors.textMuted }]}>
+                                    {hasNotificationPermission ? 'Enabled' : 'Disabled'}
+                                </Text>
+                            </View>
                         </View>
-                        <MaterialIcons name="chevron-right" size={24} color={colors.textMuted} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuRow}>
+                        <Switch
+                            value={hasNotificationPermission}
+                            onValueChange={handleNotificationToggle}
+                            trackColor={{ false: colors.border, true: colors.primaryLight }}
+                            thumbColor={hasNotificationPermission ? colors.primary : colors.textMuted}
+                        />
+                    </View>
+                    <TouchableOpacity style={styles.menuRow} onPress={handlePrivacyPress}>
                         <View style={styles.menuLeft}>
                             <MaterialIcons name="security" size={24} color={colors.textSecondary} />
                             <Text style={[styles.menuText, { color: colors.text }]}>Privacy & Security</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={24} color={colors.textMuted} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuRow}>
+                    <TouchableOpacity style={styles.menuRow} onPress={handleHelpPress}>
                         <View style={styles.menuLeft}>
                             <MaterialIcons name="help-outline" size={24} color={colors.textSecondary} />
                             <Text style={[styles.menuText, { color: colors.text }]}>Help & Support</Text>
@@ -152,7 +278,6 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 48,
     },
     profileHeader: {
         padding: 24,
@@ -166,6 +291,23 @@ const styles = StyleSheet.create({
         borderWidth: 4,
         borderColor: 'rgba(59, 130, 246, 0.2)',
         marginBottom: 16,
+        overflow: 'hidden',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 48,
+    },
+    avatarFallback: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 48,
+    },
+    avatarInitials: {
+        color: '#fff',
+        fontSize: 32,
+        fontWeight: '700',
     },
     name: {
         fontSize: 24,
@@ -251,6 +393,10 @@ const styles = StyleSheet.create({
     },
     menuText: {
         fontWeight: '600',
+    },
+    menuSubtext: {
+        fontSize: 12,
+        marginTop: 2,
     },
     logoutText: {
         fontWeight: '600',

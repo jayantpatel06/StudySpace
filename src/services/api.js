@@ -258,10 +258,80 @@ export const recordFocusSession = async (userId, duration, pointsEarned) => {
         .single();
 
     if (!error) {
+        // Add points to user
         await addUserPoints(userId, pointsEarned);
+
+        // Update total focus time and streak
+        await updateUserFocusStats(userId, duration);
     }
 
     return { data, error };
+};
+
+/**
+ * Update user's total focus time and streak
+ */
+export const updateUserFocusStats = async (userId, sessionDuration) => {
+    requireSupabase();
+
+    try {
+        // Get current user stats
+        const { data: user, error: fetchError } = await supabase
+            .from('users')
+            .select('total_focus_time, streak, updated_at')
+            .eq('id', userId)
+            .single();
+
+        if (fetchError || !user) {
+            console.error('Error fetching user for focus stats:', fetchError);
+            return { data: null, error: fetchError };
+        }
+
+        // Calculate new total focus time (in minutes)
+        const newTotalFocusTime = (user.total_focus_time || 0) + sessionDuration;
+
+        // Calculate streak - if last update was today or yesterday, maintain/increment streak
+        const lastUpdate = user.updated_at ? new Date(user.updated_at) : null;
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        let newStreak = user.streak || 0;
+        if (lastUpdate) {
+            const lastUpdateDate = lastUpdate.toDateString();
+            const todayDate = today.toDateString();
+            const yesterdayDate = yesterday.toDateString();
+
+            if (lastUpdateDate === yesterdayDate) {
+                // Last focus was yesterday, increment streak
+                newStreak += 1;
+            } else if (lastUpdateDate !== todayDate) {
+                // Last focus was more than a day ago, reset streak
+                newStreak = 1;
+            }
+            // If lastUpdateDate === todayDate, keep same streak
+        } else {
+            // First focus session
+            newStreak = 1;
+        }
+
+        // Update user stats
+        const { data, error } = await supabase
+            .from('users')
+            .update({
+                total_focus_time: newTotalFocusTime,
+                streak: newStreak,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', userId)
+            .select()
+            .single();
+
+        return { data, error };
+    } catch (error) {
+        console.error('Error updating user focus stats:', error);
+        return { data: null, error };
+    }
 };
 
 /**

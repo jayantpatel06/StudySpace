@@ -28,38 +28,43 @@ class PushNotifications {
      * Register for push notifications
      */
     async register() {
-        if (!Device.isDevice) {
-            console.log('Push notifications require a physical device');
-            return null;
-        }
-
-        // Check existing permissions
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-
-        // Request permission if not granted
-        if (existingStatus !== 'granted') {
-            const { status } = await Notifications.requestPermissionsAsync();
-            finalStatus = status;
-        }
-
-        if (finalStatus !== 'granted') {
-            console.log('Push notification permission denied');
-            return null;
-        }
-
-        // Get push token
         try {
-            const token = await Notifications.getExpoPushTokenAsync({
-                projectId: 'your-project-id', // Replace with your Expo project ID
-            });
+            if (!Device.isDevice) {
+                console.log('Push notifications require a physical device');
+                return null;
+            }
 
-            await AsyncStorage.setItem(PUSH_TOKEN_KEY, token.data);
-            console.log('Push token:', token.data);
+            // Check existing permissions
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
 
-            return token.data;
+            // Request permission if not granted
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+
+            if (finalStatus !== 'granted') {
+                console.log('Push notification permission denied');
+                return null;
+            }
+
+            // Get push token
+            try {
+                const token = await Notifications.getExpoPushTokenAsync({
+                    projectId: 'your-project-id', // Replace with your Expo project ID
+                });
+
+                await AsyncStorage.setItem(PUSH_TOKEN_KEY, token.data);
+                console.log('Push token:', token.data);
+
+                return token.data;
+            } catch (tokenError) {
+                console.warn('Error getting push token (this is normal in development):', tokenError.message);
+                return null;
+            }
         } catch (error) {
-            console.error('Error getting push token:', error);
+            console.warn('Error registering for push notifications:', error.message);
             return null;
         }
     }

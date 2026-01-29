@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ScrollView, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLocation } from '../context/LocationContext';
 import { useBooking } from '../context/BookingContext';
@@ -25,8 +26,11 @@ const SeatDetailsScreen = ({ route }) => {
     const { colors, isDark } = useTheme();
     const { selectedLibrary } = useLibrary();
     const { showSuccess, showError } = useToast();
+    const insets = useSafeAreaInsets();
 
     const [duration, setDuration] = useState(120); // minutes
+    const [selectedTime, setSelectedTime] = useState(null);
+    const [isBooking, setIsBooking] = useState(false);
 
     // Sync library and refresh location when screen mounts
     useEffect(() => {
@@ -37,30 +41,38 @@ const SeatDetailsScreen = ({ route }) => {
     }, [selectedLibrary?.id]); // Only trigger when library ID changes
 
     const handleBooking = async () => {
-        // First refresh location to get latest status
-        if (selectedLibrary) {
-            await refreshLocation(selectedLibrary);
-        }
-
-        if (locationStatus !== 'in_range') {
-            const distanceMsg = distanceToLibrary 
-                ? `You are ${distanceToLibrary}m away. ` 
-                : '';
-            const radiusMsg = selectedLibrary 
-                ? `You need to be within ${selectedLibrary.radius_meters || 100}m of ${selectedLibrary.name}.`
-                : 'Please select a library first.';
-            showError(`${distanceMsg}${radiusMsg}`);
-            return;
-        }
+        if (isBooking) return;
+        setIsBooking(true);
 
         try {
+            // First refresh location to get latest status
+            if (selectedLibrary) {
+                await refreshLocation(selectedLibrary);
+            }
+
+            if (locationStatus !== 'in_range') {
+                const distanceMsg = distanceToLibrary
+                    ? `You are ${distanceToLibrary}m away. `
+                    : '';
+                const radiusMsg = selectedLibrary
+                    ? `You need to be within ${selectedLibrary.radius_meters || 100}m of ${selectedLibrary.name}.`
+                    : 'Please select a library first.';
+                showError(`${distanceMsg}${radiusMsg}`);
+                setIsBooking(false);
+                return;
+            }
+
             successNotification();
             const location = selectedLibrary ? selectedLibrary.name : '2nd Floor • Silent Zone';
+            // Note: API currently ignores start time and books for "now", 
+            // but we'll accept the selection in UI for future support
             await createBooking(seatId, duration, location);
             showSuccess(`Booking Confirmed for Seat ${seatId}`);
-            navigation.navigate('Bookings');
+            navigation.navigate('Root', { screen: 'Bookings' });
         } catch (err) {
             showError(err.message || 'Booking failed');
+        } finally {
+            setIsBooking(false);
         }
     };
 
@@ -69,14 +81,52 @@ const SeatDetailsScreen = ({ route }) => {
         setDuration(prev => Math.max(30, Math.min(240, prev + amount)));
     };
 
+    const handleTimeSelect = (time) => {
+        selectionChanged();
+        setSelectedTime(time);
+    };
+
     const handleBack = () => {
         lightImpact();
         navigation.goBack();
     };
 
+    const renderScheduleItem = (time, status) => {
+        const isSelected = selectedTime === time;
+        const stylesMap = {
+            busy: styles.scheduleItemBusy,
+            blocked: styles.scheduleItemBlocked,
+            available: styles.scheduleItemEmpty,
+        };
+
+        // If selected, override style
+        const containerStyle = isSelected ? styles.scheduleItemSelected : (stylesMap[status] || styles.scheduleItemEmpty);
+
+        return (
+            <TouchableOpacity
+                key={time}
+                onPress={() => status === 'available' && handleTimeSelect(time)}
+                disabled={status !== 'available'}
+            >
+                <View style={[containerStyle, isSelected && { backgroundColor: colors.primary }]}>
+                    {status === 'busy' && <View style={styles.scheduleBusyBar} />}
+                    {status === 'blocked' && <MaterialIcons name="block" size={16} color="#ef4444" />}
+                    {isSelected && <MaterialIcons name="check-circle" size={24} color="white" />}
+
+                    <Text style={[
+                        status === 'blocked' ? styles.scheduleTimeMuted : styles.scheduleTime,
+                        isSelected && styles.scheduleTimeActive
+                    ]}>
+                        {time}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+            <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
                     <MaterialIcons name="arrow-back-ios-new" size={24} color={colors.textSecondary} />
                 </TouchableOpacity>
@@ -87,18 +137,6 @@ const SeatDetailsScreen = ({ route }) => {
             </View>
 
             <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 150 }}>
-                <View style={styles.heroWrapper}>
-                    <View style={styles.heroCard}>
-                        <Image
-                            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBRjId1zmpdQZzEQeeo37Sx_k4beEibzHTtvwYRFfyGvJzAQ3u26UGx-KFqg2EAo1nu4s_27fXLdI74J1H0JHrHGBVCwPc3YsboZuKJbRL-ZRXnzgQakRnWKN4shfqskweycZD92r1OSxlxT0oLrD3P_ThySmaD_HSbXeZgqDzPjUJJXBDybyWCbgdIbs1C-W1Bo3bEneH50cq0i0RRXASkRaXuKo-vqGJ9Nt1iw8CZi9rpzpC6l6AuAGVlNOzgaMAYU2idphXMbaqK' }}
-                            style={styles.heroImage}
-                        />
-                        <View style={styles.ratingBadge}>
-                            <MaterialIcons name="star" size={14} color="#eab308" />
-                            <Text style={styles.ratingText}>4.9</Text>
-                        </View>
-                    </View>
-                </View>
 
                 <View style={styles.metaSection}>
                     <View style={styles.metaHeader}>
@@ -126,7 +164,7 @@ const SeatDetailsScreen = ({ route }) => {
                                     ? 'Please wait while we verify your location.'
                                     : distanceToLibrary && selectedLibrary
                                         ? `You are ${distanceToLibrary}m away. Need to be within ${selectedLibrary.radius_meters || 100}m.`
-                                        : selectedLibrary 
+                                        : selectedLibrary
                                             ? `Move closer to ${selectedLibrary.name} to book.`
                                             : 'Please select a library first.'}
                             </Text>
@@ -163,22 +201,11 @@ const SeatDetailsScreen = ({ route }) => {
                         <Text style={styles.scheduleLink}>View Calendar</Text>
                     </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scheduleScroller}>
-                        <View style={styles.scheduleItemBusy}>
-                            <View style={styles.scheduleBusyBar} />
-                            <Text style={styles.scheduleTime}>09:00</Text>
-                        </View>
-                        <View style={styles.scheduleItemBlocked}>
-                            <MaterialIcons name="block" size={16} color="#ef4444" />
-                            <Text style={styles.scheduleTimeMuted}>10:00</Text>
-                        </View>
-                        <View style={styles.scheduleItemSelected}>
-                            <MaterialIcons name="check-circle" size={24} color="white" />
-                            <Text style={styles.scheduleTimeActive}>11:00</Text>
-                        </View>
-                        {[12, 13, 14].map(h => (
-                            <View key={h} style={styles.scheduleItemEmpty}>
-                                <Text style={styles.scheduleTime}>{h}:00</Text>
-                            </View>
+                        {renderScheduleItem('09:00', 'busy')}
+                        {renderScheduleItem('10:00', 'blocked')}
+                        {renderScheduleItem('11:00', 'available')}
+                        {[12, 13, 14, 15, 16].map(h => (
+                            renderScheduleItem(`${h}:00`, 'available')
                         ))}
                     </ScrollView>
                 </View>
@@ -194,7 +221,7 @@ const SeatDetailsScreen = ({ route }) => {
                 </View>
             </ScrollView>
 
-            <View style={styles.bottomBar}>
+            <View style={[styles.bottomBar, { paddingBottom: 16 + insets.bottom }]}>
                 <View style={styles.bottomRow}>
                     <View>
                         <Text style={styles.durationLabel}>Duration</Text>
@@ -211,12 +238,18 @@ const SeatDetailsScreen = ({ route }) => {
                     </View>
                 </View>
                 <TouchableOpacity
-                    style={[styles.bookButton, locationStatus !== 'in_range' && styles.bookButtonDisabled]}
+                    style={[styles.bookButton, (locationStatus !== 'in_range' || isBooking) && styles.bookButtonDisabled]}
                     onPress={handleBooking}
-                    disabled={locationStatus !== 'in_range'}
+                    disabled={locationStatus !== 'in_range' || isBooking}
                 >
-                    <Text style={styles.bookButtonText}>{locationStatus === 'in_range' ? 'Confirm Booking' : 'Come Closer to Book'}</Text>
-                    {locationStatus === 'in_range' && <MaterialIcons name="bolt" size={20} color="white" />}
+                    {isBooking ? (
+                        <ActivityIndicator color="white" size="small" />
+                    ) : (
+                        <>
+                            <Text style={styles.bookButtonText}>{locationStatus === 'in_range' ? 'Confirm Booking' : 'Come Closer to Book'}</Text>
+                            {locationStatus === 'in_range' && <MaterialIcons name="bolt" size={20} color="white" />}
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
         </View>

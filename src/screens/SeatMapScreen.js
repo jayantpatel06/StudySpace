@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import Animated, {
     useSharedValue,
@@ -8,6 +9,7 @@ import Animated, {
     withSequence,
     withTiming,
 } from 'react-native-reanimated';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../context/ThemeContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useLocation } from '../context/LocationContext';
@@ -115,6 +117,8 @@ const SeatMapScreen = ({ navigation }) => {
     const { colors, isDark } = useTheme();
     const { selectedLibrary } = useLibrary();
     const { locationStatus, setTargetLibrary, refreshLocation, userLocation, distanceToLibrary } = useLocation();
+    const insets = useSafeAreaInsets();
+    const tabBarHeight = useBottomTabBarHeight(); // Get tab bar height
     const [selectedSeat, setSelectedSeat] = useState(null);
     const [currentFloor, setCurrentFloor] = useState('Floor 1');
     const [zoom, setZoom] = useState(1);
@@ -208,7 +212,7 @@ const SeatMapScreen = ({ navigation }) => {
     const handleSeatPress = (item) => {
         selectionChanged();
         setSelectedSeat(item.id);
-        setShowBottomSheet(true);
+        // setShowBottomSheet(true); // User requested to remove pop-up behavior
     };
 
     const handleFloorChange = (floor) => {
@@ -255,15 +259,19 @@ const SeatMapScreen = ({ navigation }) => {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+            <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
                     <MaterialIcons name="arrow-back-ios-new" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
                     {selectedLibrary ? selectedLibrary.name : 'Library Seat Map'}
                 </Text>
-                <TouchableOpacity style={styles.headerButton}>
-                    <MaterialIcons name="info" size={24} color={colors.textSecondary} />
+                <TouchableOpacity
+                    style={styles.headerButton}
+                    onPress={() => navigation.navigate('QRScan')}
+                    accessibilityLabel="Scan QR code"
+                >
+                    <MaterialIcons name="qr-code-scanner" size={24} color={colors.primary} />
                 </TouchableOpacity>
             </View>
 
@@ -283,7 +291,7 @@ const SeatMapScreen = ({ navigation }) => {
 
             {/* Location Warning */}
             {selectedLibrary && locationStatus !== 'in_range' && (
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.locationWarning, { backgroundColor: '#fee2e2', borderColor: '#ef4444' }]}
                     onPress={() => refreshLocation(selectedLibrary)}
                 >
@@ -389,15 +397,14 @@ const SeatMapScreen = ({ navigation }) => {
                 </View>
             </ScrollView>
 
-            {/* FAB */}
-            <View style={styles.fabContainer}>
-                <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary }]}>
-                    <MaterialIcons name="qr-code-scanner" size={24} color="white" />
-                </TouchableOpacity>
-            </View>
+
 
             {/* Legend & Footer */}
-            <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+            <View style={[styles.footer, {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+                paddingBottom: 24 + tabBarHeight // Add tab bar height
+            }]}>
                 <Text style={[styles.legendTitle, { color: colors.textSecondary }]}>Availability Legend</Text>
                 <View style={styles.legendRow}>
                     <View style={styles.legendItem}>
@@ -458,7 +465,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
-        paddingTop: 48,
         paddingBottom: 8,
         borderBottomWidth: 1,
         borderBottomColor: '#e2e8f0',
@@ -518,6 +524,7 @@ const styles = StyleSheet.create({
         padding: 24,
         borderWidth: 1,
         borderColor: '#e2e8f0',
+        paddingBottom: 80, // Added space for controls
     },
     mapHeader: {
         marginBottom: 32,

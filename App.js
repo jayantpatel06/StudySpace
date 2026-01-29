@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ClerkProvider, ClerkLoaded, SignedIn, SignedOut } from '@clerk/clerk-expo';
 
 import HomeScreen from './src/screens/HomeScreen';
@@ -61,6 +62,10 @@ function HomeStack() {
 
 function MainTabs() {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  // Calculate tab bar height based on safe area
+  const tabBarHeight = 60 + insets.bottom;
 
   return (
     <Tab.Navigator
@@ -69,13 +74,19 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
-          height: 85,
-          paddingBottom: 25,
-          paddingTop: 10,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom,
+          paddingTop: 8,
           position: 'absolute',
           bottom: 0,
+          left: 0,
+          right: 0,
           borderTopWidth: 1,
-          elevation: 0,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -83,7 +94,7 @@ function MainTabs() {
           fontFamily: 'Montserrat_700Bold',
           fontSize: 10,
           textTransform: 'uppercase',
-          marginTop: 4
+          marginTop: 2
         }
       }}
     >
@@ -209,31 +220,33 @@ export default function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <ErrorBoundary>
-            <ThemeProvider>
-              <AdminProvider>
-                <AuthProvider>
-                  <LibraryProvider>
-                    <LocationProvider>
-                      <BookingProvider>
-                        <ToastProvider>
-                          <NavigationContainer>
-                            <RootNavigator />
-                          </NavigationContainer>
-                        </ToastProvider>
-                      </BookingProvider>
-                    </LocationProvider>
-                  </LibraryProvider>
-                </AuthProvider>
-              </AdminProvider>
-            </ThemeProvider>
-          </ErrorBoundary>
-        </GestureHandlerRootView>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <SafeAreaProvider>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <ErrorBoundary>
+              <ThemeProvider>
+                <AdminProvider>
+                  <AuthProvider>
+                    <LibraryProvider>
+                      <LocationProvider>
+                        <BookingProvider>
+                          <ToastProvider>
+                            <NavigationContainer>
+                              <RootNavigator />
+                            </NavigationContainer>
+                          </ToastProvider>
+                        </BookingProvider>
+                      </LocationProvider>
+                    </LibraryProvider>
+                  </AuthProvider>
+                </AdminProvider>
+              </ThemeProvider>
+            </ErrorBoundary>
+          </GestureHandlerRootView>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SafeAreaProvider>
   );
 }
 
