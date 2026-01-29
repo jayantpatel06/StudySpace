@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +9,7 @@ import { selectionChanged } from '../utils/haptics';
 const Header = () => {
     const { colors, isDark, toggleTheme, themeMode } = useTheme();
     const { userInfo } = useAuth();
+    const insets = useSafeAreaInsets();
 
     const handleThemeToggle = () => {
         selectionChanged();
@@ -32,7 +34,7 @@ const Header = () => {
     const avatarUrl = userInfo?.imageUrl;
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+        <View style={[styles.container, { backgroundColor: colors.headerBg, borderBottomColor: colors.border, paddingTop: insets.top + 8 }]}>
             {/* User Info */}
             <View style={styles.userInfo}>
                 <View style={[styles.avatarContainer, { borderColor: colors.primary }]}>
@@ -86,7 +88,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
-        paddingTop: 48,
         borderBottomWidth: 1,
     },
     userInfo: {

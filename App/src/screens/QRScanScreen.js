@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, Camera } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,10 +9,11 @@ import { successNotification, lightImpact, errorNotification } from '../utils/ha
 
 const QRScanScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [hasPermission, setHasPermission] = useState(null);
     const [scanned, setScanned] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const { createBooking } = useBooking();
+    const { createBooking, activeBooking, checkIn } = useBooking();
 
     useEffect(() => {
         const getCameraPermissions = async () => {
@@ -41,13 +43,30 @@ const QRScanScreen = () => {
             const seatId = parts.slice(3).join('-');
             const location = parts[1] || 'Library';
 
-            // Create booking
-            const result = await createBooking(seatId, 60, location);
-
-            if (result) {
-                navigation.goBack();
+            // Check if user has an active booking that needs check-in
+            if (activeBooking && !activeBooking.checkedIn) {
+                // Validate that the QR matches the booked seat
+                if (activeBooking.seatId === seatId || activeBooking.seatId === `seat-${seatId}`) {
+                    // Check in to existing booking
+                    await checkIn(activeBooking.id);
+                    // Navigate to Bookings tab to show the checked-in status
+                    navigation.navigate('Root', { screen: 'Bookings' });
+                } else {
+                    throw new Error(`Please scan the QR code for your booked seat (${activeBooking.seatId})`);
+                }
+            } else if (activeBooking && activeBooking.checkedIn) {
+                // Already checked in
+                throw new Error('You are already checked in to this seat');
             } else {
-                throw new Error('Failed to create booking');
+                // No active booking - create a new one
+                const result = await createBooking(seatId, 60, location);
+
+                if (result) {
+                    // Navigate to Bookings tab to show the new booking
+                    navigation.navigate('Root', { screen: 'Bookings' });
+                } else {
+                    throw new Error('Failed to create booking');
+                }
             }
         } catch (error) {
             errorNotification();
@@ -100,16 +119,28 @@ const QRScanScreen = () => {
             />
 
             {/* Overlay */}
-            <View style={styles.overlay}>
+            <View style={[styles.overlay, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}>
                 <View style={styles.overlayTop}>
                     <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
                         <MaterialIcons name="close" size={24} color="white" />
                     </TouchableOpacity>
-                    <Text style={styles.titleText}>Scan QR Code</Text>
+                    <Text style={styles.titleText}>
+                        {activeBooking && !activeBooking.checkedIn ? 'Check In' : 'Scan to Book'}
+                    </Text>
                     <View style={{ width: 44 }} />
                 </View>
 
                 <View style={styles.overlayMiddle}>
+                    {/* Show active booking info if checking in */}
+                    {activeBooking && !activeBooking.checkedIn && (
+                        <View style={styles.bookingInfo}>
+                            <MaterialIcons name="event-seat" size={20} color="#3b82f6" />
+                            <Text style={styles.bookingInfoText}>
+                                Checking in to Seat {activeBooking.seatId}
+                            </Text>
+                        </View>
+                    )}
+
                     <View style={styles.frameContainer}>
                         <View style={styles.frame} />
                         <View style={styles.scanLine} />
@@ -173,7 +204,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'space-between',
         padding: 24,
-        paddingTop: 48,
     },
     overlayTop: {
         flexDirection: 'row',
@@ -193,6 +223,20 @@ const styles = StyleSheet.create({
     overlayMiddle: {
         alignItems: 'center',
         gap: 16,
+    },
+    bookingInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    bookingInfoText: {
+        color: 'white',
+        fontWeight: '600',
     },
     frameContainer: {
         position: 'relative',

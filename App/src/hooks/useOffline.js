@@ -72,22 +72,39 @@ export function useNotifications(onInteraction) {
     const [pushToken, setPushToken] = useState(null);
 
     useEffect(() => {
-        // Register for push notifications
-        pushNotifications.register().then(token => {
-            if (token) {
-                setHasPermission(true);
-                setPushToken(token);
+        // Register for push notifications with error handling
+        const registerNotifications = async () => {
+            try {
+                const token = await pushNotifications.register();
+                if (token) {
+                    setHasPermission(true);
+                    setPushToken(token);
+                }
+            } catch (error) {
+                console.warn('Failed to register for notifications:', error);
+                // Don't crash the app if notifications fail
+                setHasPermission(false);
             }
-        });
+        };
 
-        // Start listening for notifications
-        pushNotifications.startListening(
-            null, // onNotification - handled by system
-            onInteraction
-        );
+        registerNotifications();
+
+        // Start listening for notifications with error handling
+        try {
+            pushNotifications.startListening(
+                null, // onNotification - handled by system
+                onInteraction
+            );
+        } catch (error) {
+            console.warn('Failed to start notification listener:', error);
+        }
 
         return () => {
-            pushNotifications.stopListening();
+            try {
+                pushNotifications.stopListening();
+            } catch (error) {
+                console.warn('Failed to stop notification listener:', error);
+            }
         };
     }, [onInteraction]);
 
