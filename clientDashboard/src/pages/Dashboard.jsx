@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useLibraryStore } from "../store/libraryStore";
+import { useThemeStore } from "../store/themeStore";
 
 function StatCard({ title, value, subtitle, icon, color }) {
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+    <div className="glass rounded-2xl p-6 shadow-lg card-hover">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
+          <p className="text-sm font-medium text-slate-600">{title}</p>
+          <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
           {subtitle && (
             <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
           )}
@@ -47,14 +48,14 @@ function ActiveStudentRow({ student }) {
   };
 
   return (
-    <tr className="hover:bg-slate-50">
+    <tr className="hover:bg-slate-100/50">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold">
             {getInitials(student.user?.name)}
           </div>
           <div>
-            <p className="font-medium text-slate-900">
+            <p className="font-medium text-slate-800">
               {student.user?.name || "Unknown"}
             </p>
             <p className="text-xs text-slate-500">{student.user?.email}</p>
@@ -91,6 +92,7 @@ export default function Dashboard() {
     fetchActiveStudents,
     subscribeToSeats,
   } = useLibraryStore();
+  const { theme, toggleTheme } = useThemeStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -131,20 +133,46 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-display">
+          <h1 className="text-2xl font-bold text-slate-800 font-display">
             Dashboard
           </h1>
-          <p className="text-slate-500">
+          <p className="text-slate-600">
             Welcome back! Here's your library overview.
           </p>
         </div>
         <div className="text-sm text-slate-500">
           Last updated: {new Date().toLocaleTimeString()}
         </div>
+
+        {/* Theme Toggle Switch */}
+        <button
+          onClick={toggleTheme}
+          className={`relative w-14 h-8 rounded-full transition-all duration-300 flex items-center ${theme === 'dark'
+            ? 'bg-slate-700'
+            : 'bg-yellow-200'
+            }`}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {/* Toggle circle with icon inside */}
+          <span className={`absolute w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300 flex items-center justify-center ${theme === 'dark'
+            ? 'translate-x-7'
+            : 'translate-x-1'
+            }`}>
+            {theme === 'dark' ? (
+              <svg className="w-4 h-4 text-indigo-950" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-orange-700" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            )}
+          </span>
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -181,8 +209,8 @@ export default function Dashboard() {
 
       {/* Library Status Card */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-1 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-900 mb-4">Library Status</h3>
+        <div className="lg:col-span-1 glass rounded-2xl p-6 shadow-lg">
+          <h3 className="font-semibold text-slate-800 mb-4">Library Status</h3>
 
           {/* Occupancy Ring */}
           <div className="flex items-center justify-center mb-4">
@@ -214,7 +242,7 @@ export default function Dashboard() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-slate-900">
+                <span className="text-3xl font-bold text-slate-800">
                   {stats?.occupancyRate || 0}%
                 </span>
                 <span className="text-xs text-slate-500">Occupancy</span>
@@ -228,28 +256,28 @@ export default function Dashboard() {
                 <span className="w-3 h-3 rounded-full bg-green-500"></span>
                 <span className="text-slate-600">Available</span>
               </div>
-              <span className="font-medium">{stats?.availableSeats || 0}</span>
+              <span className="font-medium text-slate-800">{stats?.availableSeats || 0}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-red-500"></span>
                 <span className="text-slate-600">Occupied</span>
               </div>
-              <span className="font-medium">{stats?.occupiedSeats || 0}</span>
+              <span className="font-medium text-slate-800">{stats?.occupiedSeats || 0}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
                 <span className="text-slate-600">Reserved</span>
               </div>
-              <span className="font-medium">{stats?.reservedSeats || 0}</span>
+              <span className="font-medium text-slate-800">{stats?.reservedSeats || 0}</span>
             </div>
           </div>
         </div>
 
         {/* Library Info */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-900 mb-4">
+        <div className="lg:col-span-2 glass rounded-2xl p-6 shadow-lg">
+          <h3 className="font-semibold text-slate-800 mb-4">
             Library Information
           </h3>
 
@@ -258,13 +286,13 @@ export default function Dashboard() {
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                 Name
               </p>
-              <p className="font-medium text-slate-900">{library?.name}</p>
+              <p className="font-medium text-slate-800">{library?.name}</p>
             </div>
             <div>
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                 Address
               </p>
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-slate-800">
                 {library?.address || "Not set"}
               </p>
             </div>
@@ -272,7 +300,7 @@ export default function Dashboard() {
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                 Opening Hours
               </p>
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-slate-800">
                 {library?.opening_time} - {library?.closing_time}
               </p>
             </div>
@@ -280,14 +308,14 @@ export default function Dashboard() {
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                 Geofence Radius
               </p>
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-slate-800">
                 {library?.radius_meters}m
               </p>
             </div>
           </div>
 
           {library?.description && (
-            <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="mt-4 pt-4 border-t border-slate-200/50">
               <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">
                 Description
               </p>
@@ -298,9 +326,9 @@ export default function Dashboard() {
       </div>
 
       {/* Active Students Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900">Active Students</h3>
+      <div className="glass rounded-2xl shadow-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200/50 flex items-center justify-between">
+          <h3 className="font-semibold text-slate-800">Active Students</h3>
           <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
             {activeStudents.length} checked in
           </span>
@@ -326,26 +354,26 @@ export default function Dashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-100/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Student
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Department
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Seat
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Check-in
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Duration
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200/50">
                 {activeStudents.map((student) => (
                   <ActiveStudentRow key={student.id} student={student} />
                 ))}
