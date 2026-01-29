@@ -1,24 +1,29 @@
-import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MaterialIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ClerkProvider, ClerkLoaded, SignedIn, SignedOut } from '@clerk/clerk-expo';
+import React from "react";
+import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { MaterialIcons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  ClerkProvider,
+  ClerkLoaded,
+  SignedIn,
+  SignedOut,
+} from "@clerk/clerk-expo";
 
-import HomeScreen from './src/screens/HomeScreen';
-import SeatMapScreen from './src/screens/SeatMapScreen';
-import Header from './src/components/Header';
-import FocusTimerScreen from './src/screens/FocusTimerScreen';
-import RewardsScreen from './src/screens/RewardsScreen';
-import SeatDetailsScreen from './src/screens/SeatDetailsScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import SignUpScreen from './src/screens/SignUpScreen';
-import LibrarySelectionScreen from './src/screens/LibrarySelectionScreen';
-import ErrorBoundary from './src/components/ErrorBoundary';
-import AppLoading from './src/components/AppLoading';
+import HomeScreen from "./src/screens/HomeScreen";
+import SeatMapScreen from "./src/screens/SeatMapScreen";
+import Header from "./src/components/Header";
+import FocusTimerScreen from "./src/screens/FocusTimerScreen";
+import RewardsScreen from "./src/screens/RewardsScreen";
+import SeatDetailsScreen from "./src/screens/SeatDetailsScreen";
+import LoginScreen from "./src/screens/LoginScreen";
+import SignUpScreen from "./src/screens/SignUpScreen";
+import LibrarySelectionScreen from "./src/screens/LibrarySelectionScreen";
+import ErrorBoundary from "./src/components/ErrorBoundary";
+import AppLoading from "./src/components/AppLoading";
 
 // Admin Screens
 import {
@@ -27,22 +32,23 @@ import {
   AdminLibrariesScreen,
   AddEditLibraryScreen,
   AdminSettingsScreen,
-} from './src/screens/admin';
+  AdminManageSeatsScreen,
+} from "./src/screens/admin";
 
-import { LocationProvider } from './src/context/LocationContext';
-import { BookingProvider } from './src/context/BookingContext';
-import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import { AuthProvider } from './src/context/AuthContext';
-import { AdminProvider, useAdmin } from './src/context/AdminContext';
-import { LibraryProvider } from './src/context/LibraryContext';
-import { ToastProvider } from './src/components/Toast';
-import QRScanScreen from './src/screens/QRScanScreen';
-import BookingsScreen from './src/screens/BookingsScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-import { CLERK_PUBLISHABLE_KEY, tokenCache } from './src/config/clerk';
+import { LocationProvider } from "./src/context/LocationContext";
+import { BookingProvider } from "./src/context/BookingContext";
+import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
+import { AuthProvider } from "./src/context/AuthContext";
+import { AdminProvider, useAdmin } from "./src/context/AdminContext";
+import { LibraryProvider } from "./src/context/LibraryContext";
+import { ToastProvider } from "./src/components/Toast";
+import QRScanScreen from "./src/screens/QRScanScreen";
+import BookingsScreen from "./src/screens/BookingsScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
+import { CLERK_PUBLISHABLE_KEY, tokenCache } from "./src/config/clerk";
 
-import { useFonts, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
-import { Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
+import { useFonts, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
+import { Inter_400Regular, Inter_500Medium } from "@expo-google-fonts/inter";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -72,7 +78,7 @@ function MainTabs() {
           height: 85,
           paddingBottom: 25,
           paddingTop: 10,
-          position: 'absolute',
+          position: "absolute",
           bottom: 0,
           borderTopWidth: 1,
           elevation: 0,
@@ -80,39 +86,47 @@ function MainTabs() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
-          fontFamily: 'Montserrat_700Bold',
+          fontFamily: "Montserrat_700Bold",
           fontSize: 10,
-          textTransform: 'uppercase',
-          marginTop: 4
-        }
+          textTransform: "uppercase",
+          marginTop: 4,
+        },
       }}
     >
       <Tab.Screen
         name="Home"
         component={HomeStack}
         options={{
-          tabBarIcon: ({ color }) => <MaterialIcons name="home" size={24} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="home" size={24} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="Bookings"
         component={BookingsScreen}
         options={{
-          tabBarIcon: ({ color }) => <MaterialIcons name="event-seat" size={24} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="event-seat" size={24} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="Map"
         component={SeatMapScreen}
         options={{
-          tabBarIcon: ({ color }) => <MaterialIcons name="explore" size={24} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="explore" size={24} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={24} color={color} />
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="person" size={24} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -124,14 +138,22 @@ function AppContent() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Root" component={MainTabs} />
         <Stack.Screen name="FocusTimer" component={FocusTimerScreen} />
         <Stack.Screen name="Rewards" component={RewardsScreen} />
         <Stack.Screen name="SeatDetails" component={SeatDetailsScreen} />
-        <Stack.Screen name="QRScan" component={QRScanScreen} options={{ presentation: 'modal' }} />
-        <Stack.Screen name="LibrarySelection" component={LibrarySelectionScreen} options={{ presentation: 'modal' }} />
+        <Stack.Screen
+          name="QRScan"
+          component={QRScanScreen}
+          options={{ presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="LibrarySelection"
+          component={LibrarySelectionScreen}
+          options={{ presentation: "modal" }}
+        />
       </Stack.Navigator>
     </>
   );
@@ -142,7 +164,7 @@ function AuthNavigator() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <AuthStack.Navigator screenOptions={{ headerShown: false }}>
         <AuthStack.Screen name="Login" component={LoginScreen} />
         <AuthStack.Screen name="SignUp" component={SignUpScreen} />
@@ -158,13 +180,32 @@ function AdminNavigator() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <AdminStack.Navigator screenOptions={{ headerShown: false }}>
-        <AdminStack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-        <AdminStack.Screen name="AdminLibraries" component={AdminLibrariesScreen} />
-        <AdminStack.Screen name="AdminAddLibrary" component={AddEditLibraryScreen} />
-        <AdminStack.Screen name="AdminEditLibrary" component={AddEditLibraryScreen} />
-        <AdminStack.Screen name="AdminSettings" component={AdminSettingsScreen} />
+        <AdminStack.Screen
+          name="AdminDashboard"
+          component={AdminDashboardScreen}
+        />
+        <AdminStack.Screen
+          name="AdminLibraries"
+          component={AdminLibrariesScreen}
+        />
+        <AdminStack.Screen
+          name="AdminAddLibrary"
+          component={AddEditLibraryScreen}
+        />
+        <AdminStack.Screen
+          name="AdminEditLibrary"
+          component={AddEditLibraryScreen}
+        />
+        <AdminStack.Screen
+          name="AdminManageSeats"
+          component={AdminManageSeatsScreen}
+        />
+        <AdminStack.Screen
+          name="AdminSettings"
+          component={AdminSettingsScreen}
+        />
       </AdminStack.Navigator>
     </>
   );
@@ -209,7 +250,10 @@ export default function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
+    <ClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      tokenCache={tokenCache}
+    >
       <ClerkLoaded>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <ErrorBoundary>
@@ -242,5 +286,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-
