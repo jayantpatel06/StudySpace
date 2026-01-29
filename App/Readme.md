@@ -175,5 +175,5 @@ This project is licensed under the MIT License.
 ---
 
 <p align="center">
-  Made with ❤️ for students everywhere
+  Made with ❤️ for students everywhere by our team.
 </p>
