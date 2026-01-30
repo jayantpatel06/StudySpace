@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useLibraryStore } from "../store/libraryStore";
+import { useThemeStore } from "../store/themeStore";
 import toast from "react-hot-toast";
 
 function AddFloorModal({ isOpen, onClose, onAdd }) {
@@ -204,6 +205,7 @@ function AddRoomModal({ isOpen, onClose, onAdd, floors }) {
 }
 
 function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
+  const { theme } = useThemeStore();
   const [rows, setRows] = useState("4");
   const [columns, setColumns] = useState("6");
   const [hasPower, setHasPower] = useState(true);
@@ -213,6 +215,8 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
   const [hasWifi, setHasWifi] = useState(true);
   const [wifiSpeed, setWifiSpeed] = useState("High-Speed");
   const [isLoading, setIsLoading] = useState(false);
+
+  const isDark = theme === "dark";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -240,37 +244,44 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">
+      <div className={`rounded-2xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto ${isDark ? "bg-slate-800" : "bg-white"
+        }`}>
+        <h3 className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-slate-900"}`}>
           Create Seat Matrix
         </h3>
-        <p className="text-slate-500 text-sm mb-4">For {room?.room_name}</p>
+        <p className={`text-sm mb-4 ${isDark ? "text-slate-400" : "text-slate-500"}`}>For {room?.room_name}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                 Rows
               </label>
               <input
                 type="number"
                 value={rows}
                 onChange={(e) => setRows(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                    : "bg-white border-slate-200 text-slate-900"
+                  }`}
                 placeholder="4"
                 min="1"
                 max="26"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                 Columns
               </label>
               <input
                 type="number"
                 value={columns}
                 onChange={(e) => setColumns(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                    : "bg-white border-slate-200 text-slate-900"
+                  }`}
                 placeholder="6"
                 min="1"
                 max="20"
@@ -279,23 +290,24 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
           </div>
 
           {/* Preview */}
-          <div className="bg-slate-50 rounded-xl p-4">
-            <p className="text-sm font-medium text-slate-700 mb-2">Preview</p>
-            <p className="text-2xl font-bold text-slate-900">
+          <div className={`rounded-xl p-4 ${isDark ? "bg-slate-700" : "bg-slate-50"}`}>
+            <p className={`text-sm font-medium mb-2 ${isDark ? "text-slate-300" : "text-slate-700"}`}>Preview</p>
+            <p className={`text-2xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
               {parseInt(rows || 0) * parseInt(columns || 0)} seats
             </p>
-            <p className="text-sm text-slate-500">
+            <p className={`text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
               {rows} rows × {columns} columns
             </p>
           </div>
 
           {/* Amenities Section */}
           <div>
-            <p className="text-sm font-medium text-slate-700 mb-3">
+            <p className={`text-sm font-medium mb-3 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Seat Amenities
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50">
+              <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border ${isDark ? "border-slate-600 hover:bg-slate-700" : "border-slate-200 hover:bg-slate-50"
+                }`}>
                 <input
                   type="checkbox"
                   checked={hasPower}
@@ -303,12 +315,13 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                   className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                     ⚡ Power Outlet
                   </span>
                 </div>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50">
+              <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border ${isDark ? "border-slate-600 hover:bg-slate-700" : "border-slate-200 hover:bg-slate-50"
+                }`}>
                 <input
                   type="checkbox"
                   checked={hasLamp}
@@ -316,12 +329,13 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                   className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                     💡 Desk Lamp
                   </span>
                 </div>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50">
+              <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border ${isDark ? "border-slate-600 hover:bg-slate-700" : "border-slate-200 hover:bg-slate-50"
+                }`}>
                 <input
                   type="checkbox"
                   checked={hasErgoChair}
@@ -329,12 +343,13 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                   className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                     🪑 Ergonomic Chair
                   </span>
                 </div>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-slate-200 hover:bg-slate-50">
+              <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-xl border ${isDark ? "border-slate-600 hover:bg-slate-700" : "border-slate-200 hover:bg-slate-50"
+                }`}>
                 <input
                   type="checkbox"
                   checked={isQuietZone}
@@ -342,7 +357,7 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                   className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-slate-700">
+                  <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                     🔇 Quiet Zone
                   </span>
                 </div>
@@ -351,7 +366,7 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
           </div>
 
           {/* WiFi Section */}
-          <div className="p-3 rounded-xl border border-slate-200">
+          <div className={`p-3 rounded-xl border ${isDark ? "border-slate-600" : "border-slate-200"}`}>
             <label className="flex items-center gap-3 cursor-pointer mb-3">
               <input
                 type="checkbox"
@@ -359,7 +374,7 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                 onChange={(e) => setHasWifi(e.target.checked)}
                 className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm font-medium text-slate-700">
+              <span className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                 📶 WiFi Available
               </span>
             </label>
@@ -367,7 +382,10 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
               <select
                 value={wifiSpeed}
                 onChange={(e) => setWifiSpeed(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                    ? "bg-slate-700 border-slate-600 text-white"
+                    : "bg-white border-slate-200 text-slate-900"
+                  }`}
               >
                 <option value="Basic">Basic (10 Mbps)</option>
                 <option value="Standard">Standard (50 Mbps)</option>
@@ -381,7 +399,10 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-medium hover:bg-slate-50"
+              className={`flex-1 px-4 py-2.5 border rounded-xl font-medium ${isDark
+                  ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                  : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
             >
               Cancel
             </button>
