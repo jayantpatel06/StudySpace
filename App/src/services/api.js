@@ -217,7 +217,13 @@ export const updateSeatStatus = async (seatId, status) => {
 /**
  * Create a new booking
  */
-export const createBooking = async (userId, seatId, duration, location, libraryId = null) => {
+export const createBooking = async (
+  userId,
+  seatId,
+  duration,
+  location,
+  libraryId = null,
+) => {
   requireSupabase();
 
   const { data, error } = await supabase
@@ -340,7 +346,7 @@ export const completeBooking = async (bookingId, seatId) => {
 
   const { data, error } = await supabase
     .from("bookings")
-    .update({ status: "completed" })
+    .update({ status: "completed", is_on_break: false })
     .eq("id", bookingId)
     .select()
     .single();
@@ -350,6 +356,210 @@ export const completeBooking = async (bookingId, seatId) => {
   }
 
   return { data, error };
+};
+
+// ============================================
+// ENHANCED BOOKING WORKFLOW API
+// ============================================
+
+/**
+ * Check if user is banned from booking
+ */
+export const checkBookingBan = async (userId) => {
+  requireSupabase();
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("booking_banned_until")
+    .eq("id", userId)
+    .single();
+
+  if (error) return { isBanned: false, bannedUntil: null, error };
+
+  const bannedUntil = data?.booking_banned_until;
+  if (bannedUntil && new Date(bannedUntil) > new Date()) {
+    return { isBanned: true, bannedUntil: new Date(bannedUntil), error: null };
+  }
+
+  return { isBanned: false, bannedUntil: null, error: null };
+};
+
+/**
+ * Verify check-in with token (for gate scanner)
+ */
+export const verifyCheckIn = async (verificationToken) => {
+  requireSupabase();
+
+  // Find booking with this verification token
+  const { data: booking, error: findError } = await supabase
+    .from("bookings")
+    .select("*, seats(*), users(*)")
+    .eq("verification_token", verificationToken)
+    .eq("status", "pending")
+    .eq("checked_in", false)
+    .single();
+
+  if (findError || !booking) {
+    return { data: null, error: "Invalid or expired verification code" };
+  }
+
+  // Check if check-in deadline has passed
+  if (
+    booking.checkin_deadline &&
+    new Date(booking.checkin_deadline) < new Date()
+  ) {
+    return { data: null, error: "Check-in deadline has passed" };
+  }
+
+  // Perform check-in
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({
+      checked_in: true,
+      status: "active",
+      checkin_deadline: null, // Clear deadline after check-in
+    })
+    .eq("id", booking.id)
+    .select()
+    .single();
+
+  if (!error && booking.seat_id) {
+    await updateSeatStatus(booking.seat_id, "occupied");
+  }
+
+  return { data, error };
+};
+
+/**
+ * Start a break (max 30 minutes)
+ */
+export const startBreak = async (bookingId, breakDuration = 30) => {
+  requireSupabase();
+
+  // Cap break at 30 minutes
+  const duration = Math.min(breakDuration, 30);
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({
+      is_on_break: true,
+      break_started_at: new Date().toISOString(),
+      break_duration: duration,
+    })
+    .eq("id", bookingId)
+    .eq("status", "active")
+    .select()
+    .single();
+
+  return { data, error };
+};
+
+/**
+ * End break and return to seat
+ */
+export const endBreak = async (bookingId) => {
+  requireSupabase();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({
+      is_on_break: false,
+      break_started_at: null,
+      break_duration: 0,
+    })
+    .eq("id", bookingId)
+    .select()
+    .single();
+
+  return { data, error };
+};
+
+/**
+ * Check if break has expired and release seat if user is out of range
+ * Called by the app after break timer expires
+ */
+export const checkBreakExpiry = async (bookingId, isInRange) => {
+  requireSupabase();
+
+  const { data: booking, error: findError } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", bookingId)
+    .eq("is_on_break", true)
+    .single();
+
+  if (findError || !booking) {
+    return { released: false, error: findError };
+  }
+
+  // Check if break time has expired
+  const breakEnd = new Date(booking.break_started_at);
+  breakEnd.setMinutes(breakEnd.getMinutes() + (booking.break_duration || 30));
+
+  if (new Date() > breakEnd) {
+    if (isInRange) {
+      // User is in range, just end the break
+      await endBreak(bookingId);
+      return { released: false, error: null };
+    } else {
+      // User is out of range, release the seat
+      await completeBooking(bookingId, booking.seat_id);
+      return { released: true, error: null };
+    }
+  }
+
+  return { released: false, error: null };
+};
+
+/**
+ * Release expired bookings (no-shows)
+ * This can be called periodically or triggered by client
+ */
+export const releaseExpiredBooking = async (bookingId) => {
+  requireSupabase();
+
+  const { data: booking, error: findError } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", bookingId)
+    .eq("status", "pending")
+    .eq("checked_in", false)
+    .single();
+
+  if (findError || !booking) {
+    return { released: false, error: findError };
+  }
+
+  // Check if check-in deadline has passed
+  if (
+    booking.checkin_deadline &&
+    new Date(booking.checkin_deadline) < new Date()
+  ) {
+    // Update booking to expired
+    await supabase
+      .from("bookings")
+      .update({ status: "expired" })
+      .eq("id", bookingId);
+
+    // Release seat
+    if (booking.seat_id) {
+      await updateSeatStatus(booking.seat_id, "available");
+    }
+
+    // Ban user for 30 minutes
+    await supabase
+      .from("users")
+      .update({
+        booking_banned_until: new Date(
+          Date.now() + 30 * 60 * 1000,
+        ).toISOString(),
+      })
+      .eq("id", booking.user_id);
+
+    return { released: true, error: null };
+  }
+
+  return { released: false, error: null };
 };
 
 // ============================================
