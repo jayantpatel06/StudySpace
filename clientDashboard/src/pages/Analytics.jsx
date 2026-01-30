@@ -215,14 +215,14 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-display">
+          <h1 className="text-2xl font-bold text-slate-800 font-display">
             Analytics
           </h1>
-          <p className="text-slate-500">
+          <p className="text-slate-600">
             Track your library's performance and usage patterns
           </p>
         </div>
@@ -240,28 +240,28 @@ export default function Analytics() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <p className="text-sm text-slate-500 mb-1">Total Bookings</p>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className="text-3xl font-bold text-slate-800">
             {bookingsData.values?.reduce((a, b) => a + b, 0) || 0}
           </p>
           <p className="text-xs text-slate-400 mt-1">in selected period</p>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <p className="text-sm text-slate-500 mb-1">Avg Daily Bookings</p>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className="text-3xl font-bold text-slate-800">
             {bookingsData.values?.length > 0
               ? Math.round(
-                  bookingsData.values.reduce((a, b) => a + b, 0) /
-                    bookingsData.values.length,
-                )
+                bookingsData.values.reduce((a, b) => a + b, 0) /
+                bookingsData.values.length,
+              )
               : 0}
           </p>
           <p className="text-xs text-slate-400 mt-1">per day</p>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <p className="text-sm text-slate-500 mb-1">Current Occupancy</p>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className="text-3xl font-bold text-slate-800">
             {occupancyData.total > 0
               ? Math.round((occupancyData.occupied / occupancyData.total) * 100)
               : 0}
@@ -271,9 +271,9 @@ export default function Analytics() {
             {occupancyData.occupied} of {occupancyData.total} seats
           </p>
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="glass rounded-2xl p-6 shadow-lg card-hover">
           <p className="text-sm text-slate-500 mb-1">Peak Hour</p>
-          <p className="text-3xl font-bold text-slate-900">
+          <p className="text-3xl font-bold text-slate-800">
             {peakHoursData.values?.length > 0
               ? `${peakHoursData.labels[peakHoursData.values.indexOf(Math.max(...peakHoursData.values))]}`
               : "N/A"}
@@ -285,24 +285,24 @@ export default function Analytics() {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Bookings Trend */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-900 mb-4">Booking Trends</h3>
+        <div className="glass rounded-2xl p-6 shadow-lg">
+          <h3 className="font-semibold text-slate-800 mb-4">Booking Trends</h3>
           <div className="h-64">
             <Line data={bookingsChartData} options={chartOptions} />
           </div>
         </div>
 
         {/* Peak Hours */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-900 mb-4">Peak Hours</h3>
+        <div className="glass rounded-2xl p-6 shadow-lg">
+          <h3 className="font-semibold text-slate-800 mb-4">Peak Hours</h3>
           <div className="h-64">
             <Bar data={peakHoursChartData} options={chartOptions} />
           </div>
         </div>
 
         {/* Current Occupancy */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-900 mb-4">
+        <div className="glass rounded-2xl p-6 shadow-lg">
+          <h3 className="font-semibold text-slate-800 mb-4">
             Current Seat Distribution
           </h3>
           <div className="h-64 flex items-center justify-center">
@@ -325,8 +325,8 @@ export default function Analytics() {
         </div>
 
         {/* Department Breakdown */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-          <h3 className="font-semibold text-slate-900 mb-4">
+        <div className="glass rounded-2xl p-6 shadow-lg">
+          <h3 className="font-semibold text-slate-800 mb-4">
             Bookings by Department
           </h3>
           <div className="h-64">
@@ -342,8 +342,8 @@ export default function Analytics() {
       </div>
 
       {/* Insights */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-        <h3 className="font-semibold text-slate-900 mb-4">Quick Insights</h3>
+      <div className="glass rounded-2xl p-6 shadow-lg">
+        <h3 className="font-semibold text-slate-800 mb-4">Quick Insights</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 bg-blue-50 rounded-xl">
             <div className="flex items-center gap-3">
