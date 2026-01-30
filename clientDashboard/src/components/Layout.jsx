@@ -81,9 +81,9 @@ export default function Layout() {
       </div>
 
       {/* Sidebar - Fixed position with glassmorphism */}
-      <aside className="fixed left-0 top-0 w-72 h-screen glass text-slate-700 flex flex-col overflow-y-auto z-50 border-r border-white/30">
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
+      <aside className="fixed left-0 top-0 w-72 h-screen glass text-slate-700 flex flex-col z-50 border-r border-white/30">
+        <nav className="flex-1 p-4 flex flex-col justify-between">
+          <ul className="space-y-3">
             {navItems.map((item, index) => (
               <li
                 key={item.path}
@@ -94,8 +94,7 @@ export default function Layout() {
                   to={item.path}
                   onMouseEnter={() => setHoveredItem(item.path)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group ripple ${
-                    location.pathname === item.path || 
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 group ripple ${location.pathname === item.path ||
                     (item.path !== "/" && location.pathname.startsWith(item.path.split('?')[0]))
                     ? "nav-item-active text-slate-800"
                     : "text-slate-600 hover:text-slate-800 nav-item-hover"
@@ -103,18 +102,17 @@ export default function Layout() {
                 >
                   {/* Hover glow background */}
                   {hoveredItem === item.path && location.pathname !== item.path && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent rounded-2xl" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/30 to-transparent rounded-xl" />
                   )}
 
                   {/* Icon container */}
-                  <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                    location.pathname === item.path || 
+                  <div className={`relative w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 ${location.pathname === item.path ||
                     (item.path !== "/" && location.pathname.startsWith(item.path.split('?')[0]))
                     ? "bg-white/40"
                     : "bg-white/20 group-hover:bg-white/40"
                     }`}>
                     <svg
-                      className={`w-5 h-5 transition-transform duration-300 ${hoveredItem === item.path ? "scale-110" : ""
+                      className={`w-4 h-4 transition-transform duration-300 ${hoveredItem === item.path ? "scale-110" : ""
                         }`}
                       fill="none"
                       stroke="currentColor"
@@ -132,89 +130,89 @@ export default function Layout() {
                   <span className="text-sm font-medium relative z-10">{item.label}</span>
 
                   {/* Active indicator */}
-                  {(location.pathname === item.path || 
+                  {(location.pathname === item.path ||
                     (item.path !== "/" && location.pathname.startsWith(item.path.split('?')[0]))) && (
-                    <div className="absolute right-2 w-2 h-2 bg-[#5B8BD9] rounded-full shadow-lg shadow-[#5B8BD9]/50" />
-                  )}
+                      <div className="absolute right-2 w-1.5 h-1.5 bg-[#5B8BD9] rounded-full shadow-lg shadow-[#5B8BD9]/50" />
+                    )}
                 </Link>
               </li>
             ))}
           </ul>
 
           {/* Quick Stats Card */}
-          <div className="mt-4 p-4 rounded-2xl bg-white/20 border border-white/30">
-            <div className="flex items-center justify-between mb-3">
+          <div className="p-3 rounded-xl bg-white/20 border border-white/30">
+            <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-600 uppercase tracking-wider">Quick Stats</span>
-              <span className="text-lg">📈</span>
+              <span className="text-sm">📈</span>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-slate-500">Subscribed Students</span>
-                  <span className="text-sm font-semibold text-slate-800">{stats?.subscribedStudents || 0}</span>
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className="text-xs text-slate-500">Subscribed</span>
+                  <span className="text-xs font-semibold text-slate-800">{stats?.subscribedStudents || 0}</span>
                 </div>
-                <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full shimmer" 
+                <div className="h-1 bg-white/30 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full shimmer"
                     style={{ width: `${Math.min((stats?.subscribedStudents || 0) * 10, 100)}%` }}
                   />
                 </div>
               </div>
               <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs text-slate-500">Occupancy Rate</span>
-                  <span className="text-sm font-semibold text-slate-800">{stats?.occupancyRate || 0}%</span>
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className="text-xs text-slate-500">Occupancy</span>
+                  <span className="text-xs font-semibold text-slate-800">{stats?.occupancyRate || 0}%</span>
                 </div>
-                <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] rounded-full shimmer" 
+                <div className="h-1 bg-white/30 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] rounded-full shimmer"
                     style={{ width: `${stats?.occupancyRate || 0}%` }}
                   />
                 </div>
               </div>
               <div className="flex justify-between items-center pt-1 border-t border-white/20">
                 <span className="text-xs text-slate-500">Checked In</span>
-                <span className="text-sm font-semibold text-green-600">{stats?.checkedInUsers || 0}</span>
+                <span className="text-xs font-semibold text-green-600">{stats?.checkedInUsers || 0}</span>
               </div>
             </div>
           </div>
         </nav>
 
         {/* User Info & Logout */}
-        <div className="p-4 border-t border-white/20">
+        <div className="p-3 border-t border-white/20">
           <div
-            className="flex items-center gap-3 p-3 rounded-2xl bg-white/20 mb-3 card-hover cursor-pointer"
+            className="flex items-center gap-2 p-2 rounded-xl bg-white/20 mb-2 card-hover cursor-pointer"
             onClick={() => navigate('/settings?tab=account')}
             title="Click to view Account Settings"
           >
             {/* Avatar with gradient border */}
             <div className="relative">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#5B8BD9] to-[#8B7FCF] p-0.5">
-                <div className="w-full h-full rounded-xl bg-white/90 flex items-center justify-center">
-                  <span className="text-sm font-bold text-[#5B8BD9]">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#5B8BD9] to-[#8B7FCF] p-0.5">
+                <div className="w-full h-full rounded-lg bg-white/90 flex items-center justify-center">
+                  <span className="text-xs font-bold text-[#5B8BD9]">
                     {client?.name?.[0] || "U"}
                   </span>
                 </div>
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate text-slate-800">{client?.name || "User"}</p>
+              <p className="text-xs font-semibold truncate text-slate-800">{client?.name || "User"}</p>
               <p className="text-xs text-slate-500 truncate">
                 {client?.username || "user@email.com"}
               </p>
             </div>
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
 
           <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-400/30 rounded-xl text-sm font-medium transition-all duration-300 text-red-600 hover:text-red-700 ripple group"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-400/30 rounded-lg text-xs font-medium transition-all duration-300 text-red-600 hover:text-red-700 ripple group"
           >
             <svg
-              className="w-4 h-4 transition-transform group-hover:-translate-x-1"
+              className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

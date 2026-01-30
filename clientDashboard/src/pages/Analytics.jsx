@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
+import { useThemeStore } from "../store/themeStore";
 import { supabase } from "../config/supabase";
 import {
   Chart as ChartJS,
@@ -30,7 +31,9 @@ ChartJS.register(
 );
 
 export default function Analytics() {
+  const { theme } = useThemeStore();
   const { library } = useAuthStore();
+  const isDark = theme === "dark";
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState("7"); // days
   const [bookingsData, setBookingsData] = useState([]);
@@ -188,13 +191,13 @@ export default function Analytics() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false,
+        display: true, // Restored legend display
       },
     },
     scales: {
       x: {
         grid: {
-          display: false,
+          display: true, // Restored x-axis grid display
         },
       },
       y: {
@@ -229,7 +232,10 @@ export default function Analytics() {
         <select
           value={dateRange}
           onChange={(e) => setDateRange(e.target.value)}
-          className="px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+          className={`px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+            ? "bg-slate-700 border-slate-600 text-white"
+            : "border-slate-200"
+            }`}
         >
           <option value="7">Last 7 days</option>
           <option value="14">Last 14 days</option>
@@ -305,21 +311,79 @@ export default function Analytics() {
           <h3 className="font-semibold text-slate-800 mb-4">
             Current Seat Distribution
           </h3>
-          <div className="h-64 flex items-center justify-center">
-            <div className="w-48">
+          <div className="flex items-center justify-center gap-8">
+            {/* Larger Doughnut Chart */}
+            <div className="w-56 h-56">
               <Doughnut
                 data={occupancyChartData}
                 options={{
                   ...chartOptions,
-                  cutout: "60%",
+                  cutout: "65%",
+                  scales: {
+                    x: { display: false },
+                    y: { display: false },
+                  },
                   plugins: {
                     legend: {
-                      display: true,
-                      position: "bottom",
+                      display: false,
                     },
                   },
                 }}
               />
+            </div>
+            {/* Circular Progress Icons */}
+            <div className="flex flex-col gap-4">
+              {/* Occupied */}
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12">
+                  <svg className="w-12 h-12 -rotate-90">
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="#fee2e2" strokeWidth="4" />
+                    <circle
+                      cx="24" cy="24" r="20" fill="none" stroke="#ef4444" strokeWidth="4"
+                      strokeDasharray={`${(occupancyData.occupied / (occupancyData.total || 1)) * 125.6} 125.6`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Occupied</p>
+                  <p className="text-xs text-slate-500">{occupancyData.occupied || 0} seats</p>
+                </div>
+              </div>
+              {/* Available */}
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12">
+                  <svg className="w-12 h-12 -rotate-90">
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="#dcfce7" strokeWidth="4" />
+                    <circle
+                      cx="24" cy="24" r="20" fill="none" stroke="#22c55e" strokeWidth="4"
+                      strokeDasharray={`${(occupancyData.available / (occupancyData.total || 1)) * 125.6} 125.6`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Available</p>
+                  <p className="text-xs text-slate-500">{occupancyData.available || 0} seats</p>
+                </div>
+              </div>
+              {/* Reserved */}
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12">
+                  <svg className="w-12 h-12 -rotate-90">
+                    <circle cx="24" cy="24" r="20" fill="none" stroke="#fef3c7" strokeWidth="4" />
+                    <circle
+                      cx="24" cy="24" r="20" fill="none" stroke="#f59e0b" strokeWidth="4"
+                      strokeDasharray={`${(occupancyData.reserved / (occupancyData.total || 1)) * 125.6} 125.6`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Reserved</p>
+                  <p className="text-xs text-slate-500">{occupancyData.reserved || 0} seats</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

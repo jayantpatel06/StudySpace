@@ -5,9 +5,12 @@ import { useThemeStore } from "../store/themeStore";
 import toast from "react-hot-toast";
 
 function AddFloorModal({ isOpen, onClose, onAdd }) {
+  const { theme } = useThemeStore();
   const [floorNumber, setFloorNumber] = useState("");
   const [floorName, setFloorName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const isDark = theme === "dark";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,33 +30,39 @@ function AddFloorModal({ isOpen, onClose, onAdd }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+      <div className={`rounded-2xl p-6 w-full max-w-md mx-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}>
           Add New Floor
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Floor Number
             </label>
             <input
               type="number"
               value={floorNumber}
               onChange={(e) => setFloorNumber(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
               placeholder="e.g., 1, 2, 3..."
               min="1"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Floor Name (Optional)
             </label>
             <input
               type="text"
               value={floorName}
               onChange={(e) => setFloorName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
               placeholder="e.g., Ground Floor, Reading Floor"
             />
           </div>
@@ -61,7 +70,10 @@ function AddFloorModal({ isOpen, onClose, onAdd }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-medium hover:bg-slate-50"
+              className={`flex-1 px-4 py-2.5 border rounded-xl font-medium ${isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
             >
               Cancel
             </button>
@@ -80,11 +92,14 @@ function AddFloorModal({ isOpen, onClose, onAdd }) {
 }
 
 function AddRoomModal({ isOpen, onClose, onAdd, floors }) {
+  const { theme } = useThemeStore();
   const [floorId, setFloorId] = useState("");
   const [roomName, setRoomName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [roomType, setRoomType] = useState("Study Hall");
   const [isLoading, setIsLoading] = useState(false);
+
+  const isDark = theme === "dark";
 
   const roomTypes = [
     "Study Hall",
@@ -118,19 +133,22 @@ function AddRoomModal({ isOpen, onClose, onAdd, floors }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+      <div className={`rounded-2xl p-6 w-full max-w-md mx-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+        <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}>
           Add New Room/Hall
         </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Select Floor
             </label>
             <select
               value={floorId}
               onChange={(e) => setFloorId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
             >
               <option value="">Choose a floor...</option>
               {floors.map((floor) => (
@@ -142,38 +160,47 @@ function AddRoomModal({ isOpen, onClose, onAdd, floors }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Room Name
             </label>
             <input
               type="text"
               value={roomName}
               onChange={(e) => setRoomName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
               placeholder="e.g., Hall A, Reading Room 1"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Room Code (Optional)
             </label>
             <input
               type="text"
               value={roomCode}
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
               placeholder="e.g., HA, RR1"
               maxLength={4}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Room Type
             </label>
             <select
               value={roomType}
               onChange={(e) => setRoomType(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
             >
               {roomTypes.map((type) => (
                 <option key={type} value={type}>
@@ -186,7 +213,10 @@ function AddRoomModal({ isOpen, onClose, onAdd, floors }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-medium hover:bg-slate-50"
+              className={`flex-1 px-4 py-2.5 border rounded-xl font-medium ${isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
             >
               Cancel
             </button>
@@ -262,8 +292,8 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                 value={rows}
                 onChange={(e) => setRows(e.target.value)}
                 className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
-                    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                    : "bg-white border-slate-200 text-slate-900"
+                  ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                  : "bg-white border-slate-200 text-slate-900"
                   }`}
                 placeholder="4"
                 min="1"
@@ -279,8 +309,8 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
                 value={columns}
                 onChange={(e) => setColumns(e.target.value)}
                 className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
-                    ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
-                    : "bg-white border-slate-200 text-slate-900"
+                  ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                  : "bg-white border-slate-200 text-slate-900"
                   }`}
                 placeholder="6"
                 min="1"
@@ -382,9 +412,9 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
               <select
                 value={wifiSpeed}
                 onChange={(e) => setWifiSpeed(e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
-                    ? "bg-slate-700 border-slate-600 text-white"
-                    : "bg-white border-slate-200 text-slate-900"
+                className={`w-full px-4 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                  ? "bg-slate-700 border-slate-600 text-white"
+                  : "bg-white border-slate-200 text-slate-900"
                   }`}
               >
                 <option value="Basic">Basic (10 Mbps)</option>
@@ -400,8 +430,8 @@ function CreateSeatsModal({ isOpen, onClose, onAdd, room }) {
               type="button"
               onClick={onClose}
               className={`flex-1 px-4 py-2.5 border rounded-xl font-medium ${isDark
-                  ? "border-slate-600 text-slate-300 hover:bg-slate-700"
-                  : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50"
                 }`}
             >
               Cancel

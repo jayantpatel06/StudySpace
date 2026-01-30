@@ -1,14 +1,18 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useLibraryStore } from "../store/libraryStore";
+import { useThemeStore } from "../store/themeStore";
 import toast from "react-hot-toast";
 
 function AddStudentModal({ isOpen, onClose, onAdd }) {
+  const { theme } = useThemeStore();
   const [studentCode, setStudentCode] = useState("");
   const [notes, setNotes] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [hasExpiration, setHasExpiration] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isDark = theme === "dark";
 
   // Get minimum date (today)
   const today = new Date().toISOString().split('T')[0];
@@ -24,8 +28,8 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
       return;
     }
     setIsLoading(true);
-    const result = await onAdd({ 
-      studentCode: studentCode.trim().toUpperCase(), 
+    const result = await onAdd({
+      studentCode: studentCode.trim().toUpperCase(),
       notes,
       expiresAt: hasExpiration ? new Date(expiresAt).toISOString() : null
     });
@@ -43,34 +47,36 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+      <div className={`rounded-2xl p-6 w-full max-w-md mx-4 ${isDark ? "bg-slate-800" : "bg-white"}`}>
+        <h3 className={`text-lg font-semibold mb-2 ${isDark ? "text-white" : "text-slate-900"}`}>
           Add Student Subscription
         </h3>
-        <p className="text-sm text-slate-600 mb-4">
-          Enter the student's unique code to subscribe them to your library. 
-          Students can find their code in their app profile.
+        <p className={`text-sm mb-4 ${isDark ? "text-slate-400" : "text-slate-600"}`}>
+          Enter the student's unique code to subscribe them to your library.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Student Code *
             </label>
             <input
               type="text"
               value={studentCode}
               onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none font-mono text-lg tracking-wider"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none font-mono text-lg tracking-wider ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
               placeholder="e.g., STU1A2B3C"
               maxLength={10}
             />
           </div>
-          
+
           {/* Expiration Toggle */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+          <div className={`flex items-center justify-between p-3 rounded-xl ${isDark ? "bg-slate-700" : "bg-slate-50"}`}>
             <div>
-              <p className="text-sm font-medium text-slate-700">Set Expiration Date</p>
-              <p className="text-xs text-slate-500">Subscription will auto-expire on the selected date</p>
+              <p className={`text-sm font-medium ${isDark ? "text-slate-300" : "text-slate-700"}`}>Set Expiration Date</p>
+              <p className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>Subscription will auto-expire</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -86,7 +92,7 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
           {/* Expiration Date Picker */}
           {hasExpiration && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
                 Expires On *
               </label>
               <input
@@ -94,22 +100,28 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
                 min={today}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                  ? "bg-slate-700 border-slate-600 text-white"
+                  : "bg-white border-slate-200 text-slate-900"
+                  }`}
               />
-              <p className="text-xs text-slate-500 mt-1">
-                Student will lose access after this date and time
+              <p className={`text-xs mt-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                Student will lose access after this date
               </p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDark ? "text-slate-300" : "text-slate-700"}`}>
               Notes (Optional)
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none"
+              className={`w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white border-slate-200 text-slate-900"
+                }`}
               placeholder="Add any notes about this student..."
               rows={2}
             />
@@ -118,7 +130,10 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-medium hover:bg-slate-50"
+              className={`flex-1 px-4 py-2.5 border rounded-xl font-medium ${isDark
+                ? "border-slate-600 text-slate-300 hover:bg-slate-700"
+                : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
             >
               Cancel
             </button>
@@ -161,7 +176,7 @@ function StudentRow({ student, onRemove }) {
   // Check if subscription is expired
   const isExpired = student.expires_at && new Date(student.expires_at) < new Date();
   const isActive = student.status === "active" && !isExpired;
-  
+
   // Calculate status display
   const getStatusDisplay = () => {
     if (student.status === "cancelled") return { text: "Cancelled", color: "bg-red-100 text-red-700" };
@@ -178,7 +193,7 @@ function StudentRow({ student, onRemove }) {
     const date = new Date(student.expires_at);
     const now = new Date();
     const diffDays = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
-    
+
     if (isExpired) {
       return `Expired ${date.toLocaleDateString()}`;
     }
@@ -189,7 +204,7 @@ function StudentRow({ student, onRemove }) {
   };
 
   return (
-    <tr className={`hover:bg-slate-100/50 ${isExpired ? 'opacity-60' : ''}`}>
+    <tr className={`${isExpired ? 'opacity-60' : ''}`}>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-semibold">
@@ -204,7 +219,7 @@ function StudentRow({ student, onRemove }) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <span className="font-mono text-sm text-slate-600 bg-slate-100 px-2 py-1 rounded">
+        <span className="font-mono text-sm text-slate-900 font-semibold bg-slate-100 px-2 py-1 rounded">
           {student.user?.student_code || "-"}
         </span>
       </td>
@@ -242,6 +257,7 @@ function StudentRow({ student, onRemove }) {
 }
 
 export default function StudentManagement() {
+  const { theme } = useThemeStore();
   const { library, client } = useAuthStore();
   const {
     subscribedStudents,
@@ -252,11 +268,13 @@ export default function StudentManagement() {
     removeStudentSubscription,
     subscribeToSubscriptions,
   } = useLibraryStore();
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  const isDark = theme === "dark";
 
   useEffect(() => {
     if (library?.id) {
@@ -303,10 +321,10 @@ export default function StudentManagement() {
         student.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         student.user?.student_code?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       // Check if subscription is expired based on expires_at
       const isExpired = student.expires_at && new Date(student.expires_at) < new Date();
-      
+
       let matchesStatus = false;
       if (statusFilter === "all") {
         matchesStatus = true;
@@ -317,7 +335,7 @@ export default function StudentManagement() {
       } else {
         matchesStatus = student.status === statusFilter;
       }
-      
+
       return matchesSearch && matchesStatus;
     });
   }, [subscribedStudents, searchQuery, statusFilter]);
@@ -477,13 +495,19 @@ export default function StudentManagement() {
               placeholder="Search by name, email, or student code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              className={`w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+                ? "bg-slate-700 border-slate-600 text-white placeholder-slate-400"
+                : "bg-white/80 border-slate-300 text-slate-900 placeholder-slate-500"
+                }`}
             />
           </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white"
+            className={`px-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none ${isDark
+              ? "bg-slate-700 border-slate-600 text-white"
+              : "bg-white/80 border-slate-300 text-slate-900"
+              }`}
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -534,27 +558,27 @@ export default function StudentManagement() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-100/50">
+              <thead className="bg-slate-200/70">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Student
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Student Code
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Department
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Subscribed On
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Expires
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
