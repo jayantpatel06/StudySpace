@@ -1,14 +1,15 @@
-import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { MaterialIcons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ClerkProvider, ClerkLoaded, SignedIn, SignedOut } from '@clerk/clerk-expo';
-
+import React from "react";
+import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { MaterialIcons } from "@expo/vector-icons";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import HomeScreen from "./src/screens/HomeScreen";
 import SeatMapScreen from "./src/screens/SeatMapScreen";
@@ -35,14 +36,13 @@ import {
 import { LocationProvider } from "./src/context/LocationContext";
 import { BookingProvider } from "./src/context/BookingContext";
 import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
-import { AuthProvider } from "./src/context/AuthContext";
+import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { AdminProvider, useAdmin } from "./src/context/AdminContext";
 import { LibraryProvider } from "./src/context/LibraryContext";
 import { ToastProvider } from "./src/components/Toast";
 import QRScanScreen from "./src/screens/QRScanScreen";
 import BookingsScreen from "./src/screens/BookingsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
-import { CLERK_PUBLISHABLE_KEY, tokenCache } from "./src/config/clerk";
 
 import { useFonts, Montserrat_700Bold } from "@expo-google-fonts/montserrat";
 import { Inter_400Regular, Inter_500Medium } from "@expo-google-fonts/inter";
@@ -80,13 +80,13 @@ function MainTabs() {
           height: tabBarHeight,
           paddingBottom: insets.bottom,
           paddingTop: 8,
-          position: 'absolute',
+          position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
           borderTopWidth: 1,
           elevation: 8,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -222,9 +222,10 @@ function AdminNavigator() {
 // Root navigator that handles both user and admin flows
 function RootNavigator() {
   const { isAdminLoggedIn, isLoading: isAdminLoading } = useAdmin();
+  const { isSignedIn, isLoading: isAuthLoading } = useAuth();
 
-  // Wait for admin session check to complete
-  if (isAdminLoading) {
+  // Wait for admin and auth session checks to complete
+  if (isAdminLoading || isAuthLoading) {
     return <AppLoading />;
   }
 
@@ -233,17 +234,12 @@ function RootNavigator() {
     return <AdminNavigator />;
   }
 
-  // Otherwise show normal user flow with Clerk authentication
-  return (
-    <>
-      <SignedIn>
-        <AppContent />
-      </SignedIn>
-      <SignedOut>
-        <AuthNavigator />
-      </SignedOut>
-    </>
-  );
+  // Show user flow based on Supabase authentication
+  if (isSignedIn) {
+    return <AppContent />;
+  }
+
+  return <AuthNavigator />;
 }
 
 export default function App() {
@@ -258,33 +254,28 @@ export default function App() {
   }
 
   return (
-
     <SafeAreaProvider>
-      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} tokenCache={tokenCache}>
-        <ClerkLoaded>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <ErrorBoundary>
-              <ThemeProvider>
-                <AdminProvider>
-                  <AuthProvider>
-                    <LibraryProvider>
-                      <LocationProvider>
-                        <BookingProvider>
-                          <ToastProvider>
-                            <NavigationContainer>
-                              <RootNavigator />
-                            </NavigationContainer>
-                          </ToastProvider>
-                        </BookingProvider>
-                      </LocationProvider>
-                    </LibraryProvider>
-                  </AuthProvider>
-                </AdminProvider>
-              </ThemeProvider>
-            </ErrorBoundary>
-          </GestureHandlerRootView>
-        </ClerkLoaded>
-      </ClerkProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <AdminProvider>
+              <AuthProvider>
+                <LibraryProvider>
+                  <LocationProvider>
+                    <BookingProvider>
+                      <ToastProvider>
+                        <NavigationContainer>
+                          <RootNavigator />
+                        </NavigationContainer>
+                      </ToastProvider>
+                    </BookingProvider>
+                  </LocationProvider>
+                </LibraryProvider>
+              </AuthProvider>
+            </AdminProvider>
+          </ThemeProvider>
+        </ErrorBoundary>
+      </GestureHandlerRootView>
     </SafeAreaProvider>
   );
 }
