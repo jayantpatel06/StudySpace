@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 import { useLocation } from "../context/LocationContext";
 import { useBooking } from "../context/BookingContext";
@@ -84,7 +84,8 @@ const SeatDetailsScreen = ({ route }) => {
     setTargetLibrary,
     distanceToLibrary,
   } = useLocation();
-  const { createBooking } = useBooking();
+  const { createBooking, bookingBan, checkBanStatus, activeBooking } =
+    useBooking();
   const { colors, isDark } = useTheme();
   const { selectedLibrary } = useLibrary();
   const { showSuccess, showError } = useToast();
@@ -94,6 +95,33 @@ const SeatDetailsScreen = ({ route }) => {
   const [librarySettings, setLibrarySettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
+
+  // Check if booking is currently banned
+  const isBanned = bookingBan?.isBanned || false;
+  const banMinutesRemaining =
+    isBanned && bookingBan?.bannedUntil
+      ? Math.max(
+          0,
+          Math.ceil((new Date(bookingBan.bannedUntil) - new Date()) / 60000),
+        )
+      : 0;
+
+  // Check if user has an existing booking (pending or active)
+  const hasExistingBooking = !!activeBooking;
+  const hasPendingBooking =
+    activeBooking &&
+    !activeBooking.checkedIn &&
+    activeBooking.status === "pending";
+  const hasActiveSession =
+    activeBooking &&
+    (activeBooking.checkedIn || activeBooking.status === "active");
+
+  // Check ban status when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      checkBanStatus();
+    }, [checkBanStatus]),
+  );
 
   // Build dynamic amenities array from seat data
   const getAmenities = () => {
@@ -197,6 +225,34 @@ const SeatDetailsScreen = ({ route }) => {
     setIsBooking(true);
 
     try {
+      // Check if user already has an active or pending booking
+      if (hasExistingBooking) {
+        if (hasPendingBooking) {
+          showError(
+            "You already have a pending booking. Check in or cancel it first.",
+          );
+        } else if (hasActiveSession) {
+          showError(
+            "You already have an active session. Complete or release it first.",
+          );
+        }
+        setIsBooking(false);
+        return;
+      }
+
+      // Check if user is banned from booking
+      const banStatus = await checkBanStatus();
+      if (banStatus.isBanned) {
+        const minutesLeft = Math.ceil(
+          (new Date(banStatus.bannedUntil) - new Date()) / 60000,
+        );
+        showError(
+          `You are temporarily banned. Please wait ${minutesLeft} minutes.`,
+        );
+        setIsBooking(false);
+        return;
+      }
+
       // First refresh location to get latest status
       if (selectedLibrary) {
         await refreshLocation(selectedLibrary);
@@ -218,10 +274,13 @@ const SeatDetailsScreen = ({ route }) => {
       const location = selectedLibrary
         ? selectedLibrary.name
         : "2nd Floor • Silent Zone";
-      await createBooking(seatId, duration, location);
-      showSuccess(`Booking Confirmed for Seat ${seatId}`);
-      // Navigate to Bookings tab which is nested inside Root navigator
-      navigation.navigate("Root", { screen: "Bookings" });
+      const booking = await createBooking(seatId, duration, location);
+
+      if (booking) {
+        showSuccess(`Booking Confirmed! Check in within 15 minutes.`);
+        // Navigate to Bookings tab which is nested inside Root navigator
+        navigation.navigate("Root", { screen: "Bookings" });
+      }
     } catch (err) {
       showError(err.message || "Booking failed");
     } finally {
@@ -361,6 +420,38 @@ const SeatDetailsScreen = ({ route }) => {
             {locationStatus !== "in_range" && (
               <View
                 style={[
+                  styles.infoCard,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(59, 130, 246, 0.1)"
+                      : "#eff6ff",
+                  },
+                ]}
+              >
+                <MaterialIcons
+                  name="visibility"
+                  size={24}
+                  color={colors.primary}
+                />
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={[styles.infoTitle, { color: colors.text }]}>
+                    View-Only Mode
+                  </Text>
+                  <Text
+                    style={[
+                      styles.infoSubtitle,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    You can browse available seats. Come to the library to book.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {locationStatus !== "in_range" && (
+              <View
+                style={[
                   styles.warningCard,
                   {
                     backgroundColor: isDark
@@ -406,6 +497,92 @@ const SeatDetailsScreen = ({ route }) => {
                   }}
                 >
                   <MaterialIcons name="refresh" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {isBanned && (
+              <View
+                style={[
+                  styles.warningCard,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(239, 68, 68, 0.1)"
+                      : "#fef2f2",
+                  },
+                ]}
+              >
+                <MaterialIcons name="block" size={24} color={colors.error} />
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={[styles.warningTitle, { color: colors.text }]}>
+                    Booking Temporarily Restricted
+                  </Text>
+                  <Text
+                    style={[
+                      styles.warningSubtitle,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {banMinutesRemaining > 0
+                      ? `You can book again in ${banMinutesRemaining} minute${banMinutesRemaining !== 1 ? "s" : ""}.`
+                      : "Refreshing status..."}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.retryLocationButton,
+                    { backgroundColor: colors.error },
+                  ]}
+                  onPress={() => {
+                    lightImpact();
+                    checkBanStatus();
+                  }}
+                >
+                  <MaterialIcons name="refresh" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Existing Booking Warning */}
+            {hasExistingBooking && !isBanned && (
+              <View
+                style={[
+                  styles.warningCard,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(251, 191, 36, 0.1)"
+                      : "#fffbeb",
+                    borderColor: "#fbbf24",
+                  },
+                ]}
+              >
+                <MaterialIcons name="event-seat" size={24} color="#f59e0b" />
+                <View style={{ flex: 1, marginRight: 8 }}>
+                  <Text style={[styles.warningTitle, { color: colors.text }]}>
+                    {hasPendingBooking ? "Pending Check-in" : "Session Active"}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.warningSubtitle,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {hasPendingBooking
+                      ? `You have a pending booking for Seat ${activeBooking?.seatId}. Check in or cancel it first.`
+                      : `You have an active session on Seat ${activeBooking?.seatId}. Complete or release it first.`}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.retryLocationButton,
+                    { backgroundColor: "#f59e0b" },
+                  ]}
+                  onPress={() => {
+                    lightImpact();
+                    navigation.navigate("Root", { screen: "Bookings" });
+                  }}
+                >
+                  <MaterialIcons name="arrow-forward" size={16} color="#fff" />
                 </TouchableOpacity>
               </View>
             )}
@@ -554,15 +731,64 @@ const SeatDetailsScreen = ({ route }) => {
         <TouchableOpacity
           style={[
             styles.bookButton,
-            (locationStatus !== "in_range" || isBooking) && styles.bookButtonDisabled,
+            (locationStatus !== "in_range" ||
+              isBooking ||
+              isBanned ||
+              hasExistingBooking ||
+              seatData?.status !== "available") &&
+              styles.bookButtonDisabled,
           ]}
           onPress={handleBooking}
-          disabled={locationStatus !== "in_range" || isBooking}
+          disabled={
+            locationStatus !== "in_range" ||
+            isBooking ||
+            isBanned ||
+            hasExistingBooking ||
+            seatData?.status !== "available"
+          }
         >
           {isBooking ? (
             <>
-              <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+              <ActivityIndicator
+                size="small"
+                color="white"
+                style={{ marginRight: 8 }}
+              />
               <Text style={styles.bookButtonText}>Booking...</Text>
+            </>
+          ) : seatData?.status !== "available" ? (
+            <>
+              <MaterialIcons
+                name="event-busy"
+                size={20}
+                color="white"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.bookButtonText}>Seat Unavailable</Text>
+            </>
+          ) : isBanned ? (
+            <>
+              <MaterialIcons
+                name="block"
+                size={20}
+                color="white"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.bookButtonText}>
+                Banned ({banMinutesRemaining}m left)
+              </Text>
+            </>
+          ) : hasExistingBooking ? (
+            <>
+              <MaterialIcons
+                name="event-seat"
+                size={20}
+                color="white"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.bookButtonText}>
+                {hasPendingBooking ? "Check In First" : "Session Active"}
+              </Text>
             </>
           ) : (
             <>
@@ -776,6 +1002,27 @@ const styles = StyleSheet.create({
   warningSubtitle: {
     fontSize: 12,
     color: "#b91c1c",
+  },
+  infoCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  infoTitle: {
+    fontWeight: "700",
+    color: "#1e40af",
+    marginBottom: 4,
+  },
+  infoSubtitle: {
+    fontSize: 12,
+    color: "#3b82f6",
   },
   sectionPadding: {
     paddingHorizontal: 16,

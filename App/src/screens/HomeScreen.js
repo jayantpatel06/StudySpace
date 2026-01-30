@@ -1,655 +1,717 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { useLocation } from '../context/LocationContext';
-import { useBooking } from '../context/BookingContext';
-import { useTheme } from '../context/ThemeContext';
-import { useLibrary } from '../context/LibraryContext';
-import SkeletonLoader, { SkeletonCard } from '../components/SkeletonLoader';
-import OfflineIndicator from '../components/OfflineIndicator';
-import { lightImpact } from '../utils/haptics';
-
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MaterialIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { useLocation } from "../context/LocationContext";
+import { useBooking } from "../context/BookingContext";
+import { useTheme } from "../context/ThemeContext";
+import { useLibrary } from "../context/LibraryContext";
+import SkeletonLoader from "../components/SkeletonLoader";
+import { lightImpact } from "../utils/haptics";
 
 const HomeScreen = () => {
-    const navigation = useNavigation();
-    const insets = useSafeAreaInsets();
-    const { locationStatus, setTargetLibrary, refreshLocation, distanceToLibrary } = useLocation();
-    const { activeBooking, cancelBooking, completeBooking } = useBooking();
-    const { colors, isDark } = useTheme();
-    const { selectedLibrary } = useLibrary();
-    const [remainingSeconds, setRemainingSeconds] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isExpired, setIsExpired] = useState(false);
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { locationStatus, setTargetLibrary } = useLocation();
+  const { activeBooking, checkinTimeRemaining, breakTimeRemaining } =
+    useBooking();
+  const { colors, isDark } = useTheme();
+  const { selectedLibrary } = useLibrary();
+  const [isLoading, setIsLoading] = useState(true);
 
-    // Sync selected library with location context
-    useEffect(() => {
-        if (selectedLibrary) {
-            // setTargetLibrary already calls refreshLocation internally
-            setTargetLibrary(selectedLibrary);
-        }
-    }, [selectedLibrary?.id]); // Only trigger when library ID changes
-
-    // Simulate loading state
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1200);
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-        if (!activeBooking) {
-            setRemainingSeconds(null);
-            setIsExpired(false);
-            return undefined;
-        }
-
-        const tick = () => {
-            const seconds = Math.max(0, Math.floor((activeBooking.expiresAt - Date.now()) / 1000));
-            setRemainingSeconds(seconds);
-
-            // Handle booking expiry
-            if (seconds === 0 && !isExpired) {
-                setIsExpired(true);
-                completeBooking(activeBooking.id);
-            }
-        };
-
-        tick();
-        const interval = setInterval(tick, 1000);
-        return () => clearInterval(interval);
-    }, [activeBooking, isExpired, completeBooking]);
-
-    const handleCheckout = () => {
-        if (activeBooking) {
-            lightImpact();
-            cancelBooking(activeBooking.id);
-        }
-    };
-
-    const handleNavigate = (screen, params) => {
-        lightImpact();
-        navigation.navigate(screen, params);
-    };
-
-    const handleSearch = () => {
-        if (searchQuery.trim()) {
-            lightImpact();
-            navigation.navigate('Map', { searchQuery: searchQuery.trim() });
-        }
-    };
-
-    if (isLoading) {
-        return (
-            <View style={[styles.container, { backgroundColor: colors.background }]}>
-                <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 100 }}>
-                    <View style={styles.heroSection}>
-                        <SkeletonLoader variant="text" width="80%" height={28} style={{ marginBottom: 16 }} />
-                        <SkeletonLoader variant="rect" width="100%" height={56} style={{ borderRadius: 16 }} />
-                    </View>
-                    <View style={{ paddingHorizontal: 16 }}>
-                        <SkeletonLoader variant="rect" width="100%" height={40} style={{ borderRadius: 8, marginBottom: 24 }} />
-                        <SkeletonLoader variant="rect" width="100%" height={192} style={{ borderRadius: 12, marginBottom: 32 }} />
-                        <SkeletonLoader variant="text" width={120} height={20} style={{ marginBottom: 16 }} />
-                        <View style={{ flexDirection: 'row', gap: 16 }}>
-                            <SkeletonLoader variant="rect" width="47%" height={120} style={{ borderRadius: 12 }} />
-                            <SkeletonLoader variant="rect" width="47%" height={120} style={{ borderRadius: 12 }} />
-                        </View>
-                    </View>
-                </ScrollView>
-            </View>
-        );
+  // Sync selected library with location context
+  useEffect(() => {
+    if (selectedLibrary) {
+      setTargetLibrary(selectedLibrary);
     }
+  }, [selectedLibrary?.id]);
 
+  // Simulate loading state
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleNavigate = (screen, params) => {
+    lightImpact();
+    navigation.navigate(screen, params);
+  };
+
+  // Format time helper
+  const formatTime = (seconds) => {
+    if (seconds === null || seconds === undefined) return "--:--";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  if (isLoading) {
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <OfflineIndicator />
-            <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 80 + insets.bottom }}>
-                {/* Library Selection Banner */}
-                <TouchableOpacity
-                    style={[styles.libraryBanner, {
-                        backgroundColor: selectedLibrary ? colors.primaryLight : colors.surface,
-                        borderColor: selectedLibrary ? colors.primary : colors.border,
-                    }]}
-                    onPress={() => {
-                        lightImpact();
-                        navigation.navigate('LibrarySelection');
-                    }}
-                >
-                    <View style={[styles.libraryBannerIcon, {
-                        backgroundColor: selectedLibrary ? colors.primary : colors.surfaceSecondary
-                    }]}>
-                        <MaterialIcons
-                            name="local-library"
-                            size={20}
-                            color={selectedLibrary ? '#fff' : colors.textMuted}
-                        />
-                    </View>
-                    <View style={styles.libraryBannerContent}>
-                        <Text style={[styles.libraryBannerLabel, { color: colors.textSecondary }]}>
-                            {selectedLibrary ? 'Selected Library' : 'No Library Selected'}
-                        </Text>
-                        <Text style={[styles.libraryBannerName, { color: colors.text }]}>
-                            {selectedLibrary ? selectedLibrary.name : 'Tap to select a library'}
-                        </Text>
-                    </View>
-                    <MaterialIcons name="chevron-right" size={24} color={colors.textMuted} />
-                </TouchableOpacity>
-
-                {/* Location-based booking notice */}
-                {selectedLibrary && locationStatus !== 'in_range' && (
-                    <View style={[styles.locationNotice, { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }]}>
-                        <MaterialIcons name="location-off" size={18} color="#d97706" />
-                        <Text style={styles.locationNoticeText}>
-                            You're not within {selectedLibrary.name}'s geofence. Move closer to book seats.
-                        </Text>
-                    </View>
-                )}
-
-                {/* Search Bar & Hero */}
-                <View style={styles.heroSection}>
-                    {!activeBooking ? (
-                        <>
-                            <Text style={[styles.heroTitle, { color: colors.text }]}>
-                                Where are you studying today?
-                            </Text>
-                            <View style={styles.searchContainer}>
-                                <TouchableOpacity
-                                    style={styles.searchIconContainer}
-                                    onPress={handleSearch}
-                                >
-                                    <MaterialIcons name="search" size={24} color={colors.textMuted} />
-                                </TouchableOpacity>
-                                <TextInput
-                                    style={[styles.searchInput, {
-                                        backgroundColor: colors.surface,
-                                        color: colors.text,
-                                        shadowColor: colors.cardShadow
-                                    }]}
-                                    placeholder="Search seats, floors, zones..."
-                                    placeholderTextColor={colors.textMuted}
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    onSubmitEditing={handleSearch}
-                                    returnKeyType="search"
-                                />
-                                {searchQuery.length > 0 && (
-                                    <TouchableOpacity
-                                        style={styles.clearButton}
-                                        onPress={() => setSearchQuery('')}
-                                    >
-                                        <MaterialIcons name="close" size={20} color={colors.textMuted} />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        </>
-                    ) : (
-                        <View style={[styles.activeBookingCard, {
-                            backgroundColor: colors.surface,
-                            shadowColor: colors.cardShadow
-                        }]}>
-                            <Text style={[styles.activeBookingTitle, { color: colors.text }]}>Active Booking</Text>
-                            <View style={styles.timerRow}>
-                                <Text style={[styles.timerText, { color: colors.primary }]}>
-                                    {remainingSeconds !== null
-                                        ? `${Math.floor(remainingSeconds / 60)
-                                            .toString()
-                                            .padStart(2, '0')}:${(remainingSeconds % 60)
-                                                .toString()
-                                                .padStart(2, '0')}`
-                                        : '--:--'}
-                                </Text>
-                                <Text style={[styles.timerLabel, { color: colors.textSecondary }]}>remaining</Text>
-                            </View>
-                            <View style={[styles.seatInfoRow, { backgroundColor: colors.surfaceSecondary }]}>
-                                <View style={styles.seatInfo}>
-                                    <MaterialIcons name="event-seat" size={20} color={colors.primary} />
-                                    <Text style={[styles.seatText, { color: colors.text }]}>Seat {activeBooking.seatId}</Text>
-                                </View>
-                                <Text style={[styles.locationText, { color: colors.textSecondary }]}>{activeBooking.location || 'Library'}</Text>
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.checkoutButton, { backgroundColor: colors.surfaceSecondary }]}
-                                onPress={handleCheckout}
-                            >
-                                <Text style={[styles.checkoutButtonText, { color: colors.textSecondary }]}>Check Out</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                </View>
-
-                {/* Live Stats Ticker */}
-                <View style={[styles.tickerContainer, { backgroundColor: colors.primaryLight }]}>
-                    <View style={[styles.tickerDot, { backgroundColor: colors.success }]} />
-                    <Text style={[styles.tickerText, { color: colors.textSecondary }]}>
-                        Current Library Capacity: 64% • Level 3 Quiet Zone is filling up fast!
-                    </Text>
-                </View>
-
-                {/* Quick Find Button */}
-                {!activeBooking && (
-                    <TouchableOpacity
-                        style={[styles.quickFindButton, {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.borderLight,
-                            shadowColor: colors.cardShadow
-                        }]}
-                        onPress={() => handleNavigate('Map')}
-                    >
-                        <MaterialIcons name="near-me" size={20} color={colors.primary} />
-                        <Text style={[styles.quickFindText, { color: colors.primary }]}>Find Nearest Available Seat</Text>
-                    </TouchableOpacity>
-                )}
-
-                {/* Live Occupancy / Map Preview */}
-                <View style={styles.occupancySection}>
-                    <View style={styles.occupancyHeader}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Live Occupancy</Text>
-                        <View style={styles.liveBadge}>
-                            <Text style={styles.liveBadgeText}>LIVE</Text>
-                        </View>
-                    </View>
-
-                    <TouchableOpacity
-                        style={styles.mapPreview}
-                        onPress={() => handleNavigate('Map')}
-                    >
-                        <Image
-                            source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuB4s1-oQyJuYjjbHKFJ_LL-hZBOeJXZ4c6266SWODZD8mOF-8apaJmfShRdEykyHl5GwGFGbz3vP4bv-k6k-ynQc1EAMMWmq5pvZJ_0MPlosRcAWqEwi-7VM8KHK2h4Q0NyPGWe6M7aLXfalWtWQlawERpj6o2EZ-ddMBGWX4uuXYaZVkLaVZ3jT-1vs9EmZH4QJvRSryKriQzBAq9-DAwoQ3pn3sVNi-WoLcXGuOsj6XYhXdRihFIkUOnunUTRrB4N6_x9FFbOWBX-" }}
-                            style={styles.mapImage}
-                            resizeMode="cover"
-                        />
-                        <View style={styles.mapOverlay} />
-                        <View style={styles.mapInfo}>
-                            <Text style={styles.mapInfoTitle}>Level 3 • Zone C</Text>
-                            <Text style={styles.mapInfoSubtitle}>24 seats available</Text>
-                        </View>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Quick Actions Grid */}
-                <View style={styles.actionsSection}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
-                    <View style={styles.actionsGrid}>
-                        <TouchableOpacity
-                            style={[styles.actionCard, {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.borderLight,
-                                shadowColor: colors.cardShadow
-                            }]}
-                            onPress={() => handleNavigate('FocusTimer')}
-                        >
-                            <View style={[styles.actionIcon, { backgroundColor: colors.primaryLight }]}>
-                                <MaterialIcons name="timer" size={24} color={colors.primary} />
-                            </View>
-                            <Text style={[styles.actionTitle, { color: colors.text }]}>Focus Room</Text>
-                            <Text style={[styles.actionSubtitle, { color: colors.textSecondary }]}>Start session</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.actionCard, {
-                                backgroundColor: colors.surface,
-                                borderColor: colors.borderLight,
-                                shadowColor: colors.cardShadow
-                            }]}
-                            onPress={() => handleNavigate('Rewards')}
-                        >
-                            <View style={[styles.actionIcon, { backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : '#faf5ff' }]}>
-                                <MaterialIcons name="emoji-events" size={24} color="#a855f7" />
-                            </View>
-                            <Text style={[styles.actionTitle, { color: colors.text }]}>Rewards</Text>
-                            <Text style={[styles.actionSubtitle, { color: colors.textSecondary }]}>View progress</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </ScrollView>
-
-            {/* Quick Action FAB */}
-            <TouchableOpacity
-                style={[styles.fab, { backgroundColor: colors.primary }]}
-                onPress={() => handleNavigate('QRScan')}
-            >
-                <MaterialIcons name="qr-code-scanner" size={28} color="white" />
-            </TouchableOpacity>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        >
+          <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+            <SkeletonLoader
+              variant="rect"
+              width="100%"
+              height={70}
+              style={{ borderRadius: 14, marginBottom: 24 }}
+            />
+            <SkeletonLoader
+              variant="text"
+              width="70%"
+              height={24}
+              style={{ marginBottom: 8 }}
+            />
+            <SkeletonLoader
+              variant="text"
+              width="50%"
+              height={14}
+              style={{ marginBottom: 24 }}
+            />
+            <SkeletonLoader
+              variant="rect"
+              width="100%"
+              height={50}
+              style={{ borderRadius: 12, marginBottom: 32 }}
+            />
+            <SkeletonLoader
+              variant="text"
+              width={120}
+              height={18}
+              style={{ marginBottom: 16 }}
+            />
+            <View style={{ flexDirection: "row", gap: 16 }}>
+              <SkeletonLoader
+                variant="rect"
+                width="47%"
+                height={110}
+                style={{ borderRadius: 12 }}
+              />
+              <SkeletonLoader
+                variant="rect"
+                width="47%"
+                height={110}
+                style={{ borderRadius: 12 }}
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </View>
     );
-}
+  }
 
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: 80 + insets.bottom }}
+      >
+        {/* Library Selection Banner */}
+        <TouchableOpacity
+          style={[
+            styles.libraryBanner,
+            {
+              backgroundColor: selectedLibrary
+                ? colors.primaryLight
+                : colors.surface,
+              borderColor: selectedLibrary ? colors.primary : colors.border,
+            },
+          ]}
+          onPress={() => {
+            lightImpact();
+            navigation.navigate("LibrarySelection");
+          }}
+        >
+          <View
+            style={[
+              styles.libraryBannerIcon,
+              {
+                backgroundColor: selectedLibrary
+                  ? colors.primary
+                  : colors.surfaceSecondary,
+              },
+            ]}
+          >
+            <MaterialIcons
+              name="local-library"
+              size={20}
+              color={selectedLibrary ? "#fff" : colors.textMuted}
+            />
+          </View>
+          <View style={styles.libraryBannerContent}>
+            <Text
+              style={[
+                styles.libraryBannerLabel,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {selectedLibrary ? "Selected Library" : "No Library Selected"}
+            </Text>
+            <Text style={[styles.libraryBannerName, { color: colors.text }]}>
+              {selectedLibrary
+                ? selectedLibrary.name
+                : "Tap to select a library"}
+            </Text>
+          </View>
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color={colors.textMuted}
+          />
+        </TouchableOpacity>
+
+        {/* Location-based booking notice */}
+        {selectedLibrary && locationStatus !== "in_range" && (
+          <View
+            style={[
+              styles.locationNotice,
+              { backgroundColor: "#fef3c7", borderColor: "#f59e0b" },
+            ]}
+          >
+            <MaterialIcons name="location-off" size={18} color="#d97706" />
+            <Text style={styles.locationNoticeText}>
+              You're not within {selectedLibrary.name}'s geofence. Move closer
+              to book seats.
+            </Text>
+          </View>
+        )}
+
+        {/* Hero Section */}
+        <View style={styles.heroSection}>
+          {!activeBooking ? (
+            <>
+              <Text style={[styles.heroTitle, { color: colors.text }]}>
+                {selectedLibrary
+                  ? `Welcome to ${selectedLibrary.name}`
+                  : "Find your study spot"}
+              </Text>
+              <Text
+                style={[styles.heroSubtitle, { color: colors.textSecondary }]}
+              >
+                {selectedLibrary
+                  ? "Browse available seats and start studying"
+                  : "Select a library to get started"}
+              </Text>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.activeBookingCard,
+                {
+                  backgroundColor: colors.surface,
+                  shadowColor: colors.cardShadow,
+                  borderLeftColor: activeBooking.checkedIn
+                    ? colors.success
+                    : colors.warning,
+                },
+              ]}
+              onPress={() => handleNavigate("Bookings")}
+            >
+              <View style={styles.bookingCardHeader}>
+                <Text
+                  style={[styles.activeBookingTitle, { color: colors.text }]}
+                >
+                  {activeBooking.checkedIn
+                    ? "Active Session"
+                    : "Pending Check-in"}
+                </Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: activeBooking.checkedIn
+                        ? colors.successLight
+                        : "#fef3c7",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusBadgeText,
+                      {
+                        color: activeBooking.checkedIn
+                          ? colors.success
+                          : "#d97706",
+                      },
+                    ]}
+                  >
+                    {activeBooking.isOnBreak
+                      ? "On Break"
+                      : activeBooking.checkedIn
+                        ? "Active"
+                        : "Pending"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Show appropriate timer */}
+              {!activeBooking.checkedIn && checkinTimeRemaining !== null && (
+                <View style={styles.timerRow}>
+                  <MaterialIcons
+                    name="timer"
+                    size={20}
+                    color={colors.warning}
+                  />
+                  <Text style={[styles.timerText, { color: colors.warning }]}>
+                    {formatTime(checkinTimeRemaining)}
+                  </Text>
+                  <Text
+                    style={[styles.timerLabel, { color: colors.textSecondary }]}
+                  >
+                    to check in
+                  </Text>
+                </View>
+              )}
+
+              {activeBooking.isOnBreak && breakTimeRemaining !== null && (
+                <View style={styles.timerRow}>
+                  <MaterialIcons
+                    name="pause-circle-filled"
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.timerText, { color: colors.primary }]}>
+                    {formatTime(breakTimeRemaining)}
+                  </Text>
+                  <Text
+                    style={[styles.timerLabel, { color: colors.textSecondary }]}
+                  >
+                    break remaining
+                  </Text>
+                </View>
+              )}
+
+              <View
+                style={[
+                  styles.seatInfoRow,
+                  { backgroundColor: colors.surfaceSecondary },
+                ]}
+              >
+                <View style={styles.seatInfo}>
+                  <MaterialIcons
+                    name="event-seat"
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.seatText, { color: colors.text }]}>
+                    Seat {activeBooking.seatId}
+                  </Text>
+                </View>
+                <Text
+                  style={[styles.locationText, { color: colors.textSecondary }]}
+                >
+                  {activeBooking.location || "Library"}
+                </Text>
+              </View>
+
+              <View style={styles.viewDetailsRow}>
+                <Text
+                  style={[styles.viewDetailsText, { color: colors.primary }]}
+                >
+                  View Details
+                </Text>
+                <MaterialIcons
+                  name="chevron-right"
+                  size={20}
+                  color={colors.primary}
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Browse Seats Card */}
+        {selectedLibrary && !activeBooking && (
+          <TouchableOpacity
+            style={[
+              styles.browseSeatsCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderLight,
+                shadowColor: colors.cardShadow,
+              },
+            ]}
+            onPress={() => handleNavigate("Map")}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.browseSeatsIconContainer,
+                { backgroundColor: colors.primaryLight },
+              ]}
+            >
+              <MaterialIcons
+                name="grid-view"
+                size={28}
+                color={colors.primary}
+              />
+            </View>
+            <View style={styles.browseSeatsContent}>
+              <Text style={[styles.browseSeatsTitle, { color: colors.text }]}>
+                Browse Available Seats
+              </Text>
+              <Text
+                style={[
+                  styles.browseSeatsSubtitle,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                View seat map and book your spot
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.browseSeatsArrow,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <MaterialIcons name="arrow-forward" size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Quick Actions Grid */}
+        <View style={styles.actionsSection}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Quick Actions
+          </Text>
+          <View style={styles.actionsGrid}>
+            <TouchableOpacity
+              style={[
+                styles.actionCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.borderLight,
+                  shadowColor: colors.cardShadow,
+                },
+              ]}
+              onPress={() => handleNavigate("FocusTimer")}
+            >
+              <View
+                style={[
+                  styles.actionIcon,
+                  { backgroundColor: colors.primaryLight },
+                ]}
+              >
+                <MaterialIcons name="timer" size={24} color={colors.primary} />
+              </View>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>
+                Focus Room
+              </Text>
+              <Text
+                style={[styles.actionSubtitle, { color: colors.textSecondary }]}
+              >
+                Start session
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.borderLight,
+                  shadowColor: colors.cardShadow,
+                },
+              ]}
+              onPress={() => handleNavigate("Rewards")}
+            >
+              <View
+                style={[
+                  styles.actionIcon,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(168, 85, 247, 0.15)"
+                      : "#faf5ff",
+                  },
+                ]}
+              >
+                <MaterialIcons name="emoji-events" size={24} color="#a855f7" />
+              </View>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>
+                Rewards
+              </Text>
+              <Text
+                style={[styles.actionSubtitle, { color: colors.textSecondary }]}
+              >
+                View progress
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Quick Action FAB */}
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={() => handleNavigate("QRScan")}
+      >
+        <MaterialIcons name="qr-code-scanner" size={28} color="white" />
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8F9FA',
-    },
-    scrollView: {
-        flex: 1,
-    },
-    heroSection: {
-        paddingHorizontal: 16,
-        paddingVertical: 24,
-    },
-    heroTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#202124',
-        marginBottom: 16,
-    },
-    searchContainer: {
-        position: 'relative',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    searchIconContainer: {
-        position: 'absolute',
-        left: 16,
-        zIndex: 10,
-    },
-    clearButton: {
-        position: 'absolute',
-        right: 16,
-        zIndex: 10,
-        padding: 4,
-    },
-    searchInput: {
-        width: '100%',
-        paddingLeft: 48,
-        paddingRight: 48,
-        paddingVertical: 16,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        fontSize: 16,
-        color: '#202124',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-    },
-    activeBookingCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 24,
-        borderTopWidth: 4,
-        borderTopColor: '#3b82f6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    activeBookingTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#202124',
-        marginBottom: 8,
-    },
-    timerRow: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-        gap: 8,
-        marginBottom: 16,
-    },
-    timerText: {
-        fontSize: 36,
-        fontWeight: '700',
-        color: '#3b82f6',
-    },
-    timerLabel: {
-        fontSize: 14,
-        color: '#64748b',
-    },
-    seatInfoRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#F8F9FA',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
-    },
-    seatInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    seatText: {
-        fontWeight: '700',
-        color: '#202124',
-    },
-    locationText: {
-        fontSize: 12,
-        color: '#64748b',
-    },
-    checkoutButton: {
-        width: '100%',
-        backgroundColor: '#f1f5f9',
-        paddingVertical: 12,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    checkoutButtonText: {
-        color: '#475569',
-        fontWeight: '700',
-        fontSize: 14,
-    },
-    tickerContainer: {
-        backgroundColor: '#eff6ff',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        marginBottom: 24,
-        marginHorizontal: 16,
-        borderRadius: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    tickerDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#22c55e',
-    },
-    tickerText: {
-        fontSize: 12,
-        color: '#475569',
-        fontStyle: 'italic',
-        flex: 1,
-    },
-    quickFindButton: {
-        marginHorizontal: 16,
-        marginBottom: 24,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 16,
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
-    },
-    quickFindText: {
-        color: '#3b82f6',
-        fontWeight: '700',
-        fontSize: 14,
-    },
-    occupancySection: {
-        paddingHorizontal: 16,
-    },
-    occupancyHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#202124',
-    },
-    liveBadge: {
-        backgroundColor: '#fee2e2',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-    },
-    liveBadgeText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#dc2626',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    mapPreview: {
-        height: 192,
-        borderRadius: 12,
-        overflow: 'hidden',
-        position: 'relative',
-    },
-    mapImage: {
-        width: '100%',
-        height: '100%',
-        opacity: 0.9,
-    },
-    mapOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    },
-    mapInfo: {
-        position: 'absolute',
-        bottom: 12,
-        left: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-    },
-    mapInfoTitle: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#1f2937',
-    },
-    mapInfoSubtitle: {
-        fontSize: 10,
-        color: '#64748b',
-    },
-    actionsSection: {
-        paddingHorizontal: 16,
-        marginTop: 32,
-    },
-    actionsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        gap: 16,
-        marginTop: 16,
-    },
-    actionCard: {
-        width: '47%',
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderRadius: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
-    },
-    actionIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 12,
-    },
-    actionTitle: {
-        fontWeight: '700',
-        color: '#202124',
-        marginBottom: 4,
-    },
-    actionSubtitle: {
-        fontSize: 12,
-        color: '#64748b',
-    },
-    fab: {
-        position: 'absolute',
-        bottom: 24,
-        right: 24,
-        width: 56,
-        height: 56,
-        backgroundColor: '#3b82f6',
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#3b82f6',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    libraryBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 8,
-        marginBottom: 16,
-        padding: 14,
-        borderRadius: 14,
-        borderWidth: 1.5,
-        gap: 12,
-    },
-    libraryBannerIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    libraryBannerContent: {
-        flex: 1,
-    },
-    libraryBannerLabel: {
-        fontFamily: 'Inter_400Regular',
-        fontSize: 11,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: 2,
-    },
-    libraryBannerName: {
-        fontFamily: 'Inter_500Medium',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    locationNotice: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginBottom: 16,
-        padding: 12,
-        borderRadius: 10,
-        borderWidth: 1,
-        gap: 10,
-    },
-    locationNoticeText: {
-        flex: 1,
-        fontFamily: 'Inter_400Regular',
-        fontSize: 12,
-        color: '#92400e',
-        lineHeight: 16,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F9FA",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  heroSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  heroTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#202124",
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+  activeBookingCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#3b82f6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bookingCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  activeBookingTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#202124",
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  timerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  timerText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#3b82f6",
+  },
+  timerLabel: {
+    fontSize: 13,
+    color: "#64748b",
+  },
+  seatInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  seatInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  seatText: {
+    fontWeight: "600",
+    color: "#202124",
+  },
+  locationText: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  viewDetailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
+  },
+  viewDetailsText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  browseSeatsCard: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    gap: 14,
+  },
+  browseSeatsIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  browseSeatsContent: {
+    flex: 1,
+  },
+  browseSeatsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  browseSeatsSubtitle: {
+    fontSize: 13,
+  },
+  browseSeatsArrow: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#202124",
+  },
+  actionsSection: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 16,
+    marginTop: 16,
+  },
+  actionCard: {
+    width: "47%",
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  actionTitle: {
+    fontWeight: "700",
+    color: "#202124",
+    marginBottom: 4,
+  },
+  actionSubtitle: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    backgroundColor: "#3b82f6",
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  libraryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 12,
+  },
+  libraryBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  libraryBannerContent: {
+    flex: 1,
+  },
+  libraryBannerLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  libraryBannerName: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  locationNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 10,
+  },
+  locationNoticeText: {
+    flex: 1,
+    fontSize: 12,
+    color: "#92400e",
+    lineHeight: 16,
+  },
 });
 
 export default HomeScreen;

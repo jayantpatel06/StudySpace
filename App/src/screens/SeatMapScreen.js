@@ -20,7 +20,6 @@ import { useTheme } from "../context/ThemeContext";
 import { useLibrary } from "../context/LibraryContext";
 import { useLocation } from "../context/LocationContext";
 import { selectionChanged, lightImpact } from "../utils/haptics";
-import SeatBottomSheet from "../components/SeatBottomSheet";
 import { SkeletonMapGrid } from "../components/SkeletonLoader";
 import {
   getSeatHeatmap,
@@ -139,7 +138,6 @@ const SeatMapScreen = ({ navigation }) => {
   const [zoom, setZoom] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [floorsLoading, setFloorsLoading] = useState(true);
-  const [showBottomSheet, setShowBottomSheet] = useState(false);
   const [seatsData, setSeatsData] = useState({ rows: [], allSeats: [] });
   const [apiError, setApiError] = useState(null);
   const [isLive, setIsLive] = useState(false);
@@ -292,18 +290,13 @@ const SeatMapScreen = ({ navigation }) => {
   const handleSeatPress = (item) => {
     selectionChanged();
     setSelectedSeat(item.id);
-    setShowBottomSheet(true);
+    // Navigate directly to seat details
+    navigation.navigate("SeatDetails", { seatId: item.id });
   };
 
   const handleFloorChange = (floor) => {
     selectionChanged();
     setCurrentFloor(floor);
-  };
-
-  const handleBookNow = () => {
-    lightImpact();
-    setShowBottomSheet(false);
-    navigation.navigate("SeatDetails", { seatId: selectedSeat });
   };
 
   // Memoized seat statistics
@@ -558,8 +551,8 @@ const SeatMapScreen = ({ navigation }) => {
             </ScrollView>
           )}
 
-          {/* Controls */}
-          <View style={styles.controls}>
+          {/* Zoom Controls */}
+          <View style={styles.zoomControls}>
             <TouchableOpacity
               style={[
                 styles.controlButton,
@@ -570,8 +563,8 @@ const SeatMapScreen = ({ navigation }) => {
             >
               <MaterialIcons
                 name="add"
-                size={24}
-                color={zoom >= 1.5 ? colors.textMuted : colors.textSecondary}
+                size={20}
+                color={zoom >= 1.5 ? colors.textMuted : colors.text}
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -584,15 +577,20 @@ const SeatMapScreen = ({ navigation }) => {
             >
               <MaterialIcons
                 name="remove"
-                size={24}
-                color={zoom <= 0.8 ? colors.textMuted : colors.textSecondary}
+                size={20}
+                color={zoom <= 0.8 ? colors.textMuted : colors.text}
               />
             </TouchableOpacity>
-          </View>
-          <View style={styles.zoomLabelWrapper}>
-            <Text style={[styles.zoomLabel, { color: colors.textSecondary }]}>
-              Zoom {Math.round(zoom * 100)}%
-            </Text>
+            <View
+              style={[
+                styles.zoomLabelBadge,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.zoomLabel, { color: colors.textSecondary }]}>
+                {Math.round(zoom * 100)}%
+              </Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -705,14 +703,6 @@ const SeatMapScreen = ({ navigation }) => {
           </View>
         )}
       </View>
-
-      {/* Bottom Sheet */}
-      <SeatBottomSheet
-        seat={getSelectedSeatData()}
-        visible={showBottomSheet}
-        onClose={() => setShowBottomSheet(false)}
-        onBookNow={handleBookNow}
-      />
     </View>
   );
 };
@@ -903,16 +893,18 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.9)",
     marginTop: 2,
   },
-  controls: {
+  zoomControls: {
     position: "absolute",
     bottom: 16,
     right: 16,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   controlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: "white",
     alignItems: "center",
     justifyContent: "center",
@@ -920,9 +912,9 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   controlButtonDisabled: {
     backgroundColor: "#f8fafc",
@@ -1032,14 +1024,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  zoomLabelWrapper: {
-    alignItems: "flex-end",
-    marginTop: 8,
+  zoomLabelBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    backgroundColor: "white",
+    borderColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   zoomLabel: {
     fontSize: 12,
     color: "#64748b",
-    fontWeight: "600",
+    fontWeight: "700",
   },
   emptyState: {
     alignItems: "center",

@@ -177,12 +177,19 @@ export const AuthProvider = ({ children }) => {
       id: userProfile?.id ?? null,
       authId: user.id,
       email: user.email,
-      firstName: user.user_metadata?.first_name ?? null,
-      lastName: user.user_metadata?.last_name ?? null,
+      firstName:
+        userProfile?.name?.split(" ")[0] ??
+        user.user_metadata?.first_name ??
+        null,
+      lastName:
+        userProfile?.name?.split(" ").slice(1).join(" ") ??
+        user.user_metadata?.last_name ??
+        null,
       fullName:
-        (userProfile?.name ?? user.user_metadata?.first_name)
+        userProfile?.name ??
+        (user.user_metadata?.first_name
           ? `${user.user_metadata?.first_name || ""} ${user.user_metadata?.last_name || ""}`.trim()
-          : null,
+          : null),
       imageUrl: userProfile?.avatar_url ?? null,
       points: userProfile?.points ?? 0,
       streak: userProfile?.streak ?? 0,
