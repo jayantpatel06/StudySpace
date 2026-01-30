@@ -7,8 +7,169 @@ export const useLibraryStore = create((set, get) => ({
   seats: [],
   stats: null,
   activeStudents: [],
+  subscribedStudents: [],
   isLoading: false,
   error: null,
+
+  // Fetch subscribed students for a library
+  fetchSubscribedStudents: async (libraryId) => {
+    try {
+      const { data, error } = await supabase
+        .from("library_subscriptions")
+        .select(`
+          *,
+          user:users(id, name, email, department, avatar_url, student_code)
+        `)
+        .eq("library_id", libraryId)
+        .order("subscribed_at", { ascending: false });
+
+      if (error) throw error;
+
+      set({ subscribedStudents: data || [] });
+      return data;
+    } catch (error) {
+      set({ error: error.message });
+      return [];
+    }
+  },
+
+  // Add student subscription by student code
+  addStudentSubscription: async (libraryId, studentCode, clientId, notes = "", expiresAt = null) => {
+    try {
+      // First, find the user by student code
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("id, name, email")
+        .eq("student_code", studentCode)
+        .single();
+
+      if (userError || !user) {
+        return { data: null, error: "Student not found with this code" };
+      }
+
+      // Check if already subscribed (use maybeSingle to avoid error when no rows found)
+      const { data: existing, error: existingError } = await supabase
+        .from("library_subscriptions")
+        .select("id, status, expires_at")
+        .eq("user_id", user.id)
+        .eq("library_id", libraryId)
+        .maybeSingle();
+
+      if (existingError) {
+        return { data: null, error: existingError.message };
+      }
+
+      if (existing) {
+        // Check if subscription is currently active and not expired
+        const isExpired = existing.expires_at && new Date(existing.expires_at) < new Date();
+        const isActive = existing.status === "active" && !isExpired;
+
+        if (isActive) {
+          return { data: null, error: "Student is already subscribed to this library" };
+        }
+        
+        // Reactivate the subscription (expired or cancelled)
+        const { data, error } = await supabase
+          .from("library_subscriptions")
+          .update({
+            status: "active",
+            subscription_code: studentCode,
+            notes,
+            expires_at: expiresAt,
+            subscribed_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id)
+          .select(`
+            *,
+            user:users(id, name, email, department, avatar_url, student_code)
+          `)
+          .single();
+
+        if (error) throw error;
+
+        const { subscribedStudents } = get();
+        set({
+          subscribedStudents: subscribedStudents.map((s) =>
+            s.id === existing.id ? data : s
+          ),
+        });
+        return { data, error: null };
+      }
+
+      // Create new subscription
+      const { data, error } = await supabase
+        .from("library_subscriptions")
+        .insert({
+          user_id: user.id,
+          library_id: libraryId,
+          subscription_code: studentCode,
+          status: "active",
+          created_by: clientId,
+          notes,
+          expires_at: expiresAt,
+        })
+        .select(`
+          *,
+          user:users(id, name, email, department, avatar_url, student_code)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      const { subscribedStudents } = get();
+      set({ subscribedStudents: [data, ...subscribedStudents] });
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error.message };
+    }
+  },
+
+  // Remove student subscription
+  removeStudentSubscription: async (subscriptionId) => {
+    try {
+      const { error } = await supabase
+        .from("library_subscriptions")
+        .update({ status: "cancelled" })
+        .eq("id", subscriptionId);
+
+      if (error) throw error;
+
+      const { subscribedStudents } = get();
+      set({
+        subscribedStudents: subscribedStudents.map((s) =>
+          s.id === subscriptionId ? { ...s, status: "cancelled" } : s
+        ),
+      });
+      return { error: null };
+    } catch (error) {
+      return { error: error.message };
+    }
+  },
+
+  // Subscribe to real-time subscription updates
+  subscribeToSubscriptions: (libraryId) => {
+    const channel = supabase
+      .channel("subscriptions-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "library_subscriptions",
+          filter: `library_id=eq.${libraryId}`,
+        },
+        async (payload) => {
+          // Refetch to get the joined user data
+          const { fetchSubscribedStudents } = get();
+          await fetchSubscribedStudents(libraryId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  },
 
   // Fetch all floors for a library
   fetchFloors: async (libraryId) => {
@@ -283,7 +444,7 @@ export const useLibraryStore = create((set, get) => ({
   // Fetch library stats
   fetchStats: async (libraryId) => {
     try {
-      const [seatsResult, bookingsResult, usersResult] = await Promise.all([
+      const [seatsResult, bookingsResult, usersResult, subscriptionsResult] = await Promise.all([
         supabase
           .from("seats")
           .select("status, is_active")
@@ -302,11 +463,22 @@ export const useLibraryStore = create((set, get) => ({
           .eq("library_id", libraryId)
           .eq("status", "active")
           .eq("checked_in", true),
+        supabase
+          .from("library_subscriptions")
+          .select("id, status, expires_at")
+          .eq("library_id", libraryId),
       ]);
 
       const seats = seatsResult.data || [];
       const todayBookings = bookingsResult.data || [];
       const activeBookings = usersResult.data || [];
+      const subscriptions = subscriptionsResult.data || [];
+
+      // Count active subscriptions (status=active AND not expired)
+      const now = new Date();
+      const activeSubscriptions = subscriptions.filter(
+        (s) => s.status === "active" && (!s.expires_at || new Date(s.expires_at) > now)
+      );
 
       const stats = {
         totalSeats: seats.filter((s) => s.is_active !== false).length,
@@ -321,6 +493,8 @@ export const useLibraryStore = create((set, get) => ({
         ).length,
         todayBookings: todayBookings.length,
         checkedInUsers: activeBookings.length,
+        subscribedStudents: activeSubscriptions.length,
+        totalSubscriptions: subscriptions.length,
         occupancyRate:
           seats.length > 0
             ? Math.round(

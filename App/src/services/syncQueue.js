@@ -93,7 +93,8 @@ class SyncQueue {
                         payload.userId,
                         payload.seatId,
                         payload.duration,
-                        payload.location
+                        payload.location,
+                        payload.libraryId
                     );
 
                 case 'CANCEL_BOOKING':

@@ -4,6 +4,7 @@ import { useAuthStore } from "./store/authStore";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import SeatManagement from "./pages/SeatManagement";
+import StudentManagement from "./pages/StudentManagement";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Layout from "./components/Layout";
@@ -47,6 +48,7 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="students" element={<StudentManagement />} />
           <Route path="seats" element={<SeatManagement />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="settings" element={<Settings />} />

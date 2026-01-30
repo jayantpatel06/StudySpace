@@ -93,28 +93,44 @@ const BookingsScreen = () => {
                             <Text style={[styles.loadingText, { color: colors.textMuted }]}>Loading history...</Text>
                         </View>
                     ) : bookings.length > 0 ? (
-                        bookings.map((booking, index) => (
-                            <View key={booking.id || index} style={[styles.historyItem, { backgroundColor: colors.surface }]}>
-                                <View>
-                                    <Text style={[styles.historySeat, { color: colors.text }]}>Seat {booking.seatId}</Text>
-                                    <Text style={[styles.historyDate, { color: colors.textMuted }]}>{new Date(booking.startTime).toLocaleDateString()}</Text>
-                                </View>
-                                <View style={styles.historyRight}>
-                                    <Text style={[styles.historyDuration, { color: colors.textSecondary }]}>{booking.duration}m</Text>
-                                    <View style={[
-                                        styles.historyStatusBadge,
-                                        { backgroundColor: booking.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)' }
-                                    ]}>
-                                        <Text style={[
-                                            styles.historyStatusText,
-                                            { color: booking.status === 'completed' ? '#16a34a' : '#ef4444' }
+                        bookings.map((booking, index) => {
+                            // Determine status display
+                            const isActive = booking.status === 'active' || booking.status === 'pending' || booking.status === 'pending_checkin';
+                            const isCompleted = booking.status === 'completed';
+                            const isCancelled = booking.status === 'cancelled' || booking.status === 'expired';
+                            
+                            const getStatusIcon = () => {
+                                if (isActive) return 'timer';
+                                if (isCompleted) return 'check-circle';
+                                return 'cancel';
+                            };
+                            
+                            const getStatusColor = () => {
+                                if (isActive) return { bg: 'rgba(59,130,246,0.1)', text: '#3b82f6' };
+                                if (isCompleted) return { bg: 'rgba(34,197,94,0.1)', text: '#16a34a' };
+                                return { bg: 'rgba(239,68,68,0.1)', text: '#ef4444' };
+                            };
+                            
+                            const statusColors = getStatusColor();
+                            
+                            return (
+                                <View key={booking.id || index} style={[styles.historyItem, { backgroundColor: colors.surface }]}>
+                                    <View>
+                                        <Text style={[styles.historySeat, { color: colors.text }]}>Seat {booking.seatId}</Text>
+                                        <Text style={[styles.historyDate, { color: colors.textMuted }]}>{new Date(booking.startTime).toLocaleDateString()}</Text>
+                                    </View>
+                                    <View style={styles.historyRight}>
+                                        <Text style={[styles.historyDuration, { color: colors.textSecondary }]}>{booking.duration}m</Text>
+                                        <View style={[
+                                            styles.historyStatusBadge,
+                                            { backgroundColor: statusColors.bg }
                                         ]}>
-                                            {booking.status === 'completed' ? '✓' : '✕'}
-                                        </Text>
+                                            <MaterialIcons name={getStatusIcon()} size={16} color={statusColors.text} />
+                                        </View>
                                     </View>
                                 </View>
-                            </View>
-                        ))
+                            );
+                        })
                     ) : (
                         <Text style={[styles.noHistory, { color: colors.textMuted }]}>No past bookings found.</Text>
                     )}

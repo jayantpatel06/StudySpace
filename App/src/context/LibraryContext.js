@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../config/supabase";
@@ -19,12 +20,22 @@ export const LibraryProvider = ({ children }) => {
   const [selectedLibrary, setSelectedLibrary] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Fetch libraries and selected library on mount
   useEffect(() => {
-    fetchLibraries();
     loadSelectedLibrary();
   }, []);
+
+  // Fetch subscribed libraries when user changes
+  useEffect(() => {
+    if (userInfo?.id) {
+      fetchSubscribedLibraries();
+    } else {
+      setLibraries([]);
+      setIsLoading(false);
+    }
+  }, [userInfo?.id]);
 
   // Sync selected library with database when user changes
   useEffect(() => {
@@ -33,14 +44,62 @@ export const LibraryProvider = ({ children }) => {
     }
   }, [userInfo?.id, selectedLibrary?.id]);
 
-  const fetchLibraries = async () => {
+  // Filter libraries based on search query
+  const filteredLibraries = useMemo(() => {
+    if (!searchQuery.trim()) return libraries;
+    const query = searchQuery.toLowerCase().trim();
+    return libraries.filter(
+      (lib) =>
+        lib.name?.toLowerCase().includes(query) ||
+        lib.address?.toLowerCase().includes(query)
+    );
+  }, [libraries, searchQuery]);
+
+  // Fetch only libraries the user is subscribed to (with active, non-expired subscriptions)
+  const fetchSubscribedLibraries = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // First, get the user's subscribed library IDs (active and not expired)
+      const { data: subscriptions, error: subError } = await supabase
+        .from("library_subscriptions")
+        .select("library_id, expires_at")
+        .eq("user_id", userInfo?.id)
+        .eq("status", "active");
+
+      if (subError) {
+        console.error("Error fetching subscriptions:", subError);
+        setError("Failed to load subscriptions");
+        setLibraries([]);
+        return;
+      }
+
+      if (!subscriptions || subscriptions.length === 0) {
+        setLibraries([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Filter out expired subscriptions
+      const now = new Date();
+      const validSubscriptions = subscriptions.filter(
+        (sub) => !sub.expires_at || new Date(sub.expires_at) > now
+      );
+
+      if (validSubscriptions.length === 0) {
+        setLibraries([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const libraryIds = validSubscriptions.map((sub) => sub.library_id);
+
+      // Fetch the actual library details
       const { data, error: fetchError } = await supabase
         .from("libraries")
         .select("*")
+        .in("id", libraryIds)
         .eq("is_active", true)
         .order("name");
 
@@ -69,6 +128,14 @@ export const LibraryProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Legacy function for backward compatibility
+  const fetchLibraries = async () => {
+    if (userInfo?.id) {
+      return fetchSubscribedLibraries();
+    }
+    setLibraries([]);
   };
 
   const loadSelectedLibrary = async () => {
@@ -162,10 +229,14 @@ export const LibraryProvider = ({ children }) => {
     <LibraryContext.Provider
       value={{
         libraries,
+        filteredLibraries,
         selectedLibrary,
         isLoading,
         error,
+        searchQuery,
+        setSearchQuery,
         fetchLibraries,
+        fetchSubscribedLibraries,
         selectLibrary,
         clearSelectedLibrary,
         getLibraryById,

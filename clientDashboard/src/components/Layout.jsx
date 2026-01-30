@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
+import { useLibraryStore } from "../store/libraryStore";
 import { useState, useEffect } from "react";
 
 const navItems = [
@@ -9,6 +10,12 @@ const navItems = [
     label: "Dashboard",
     icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
     emoji: "🏠",
+  },
+  {
+    path: "/students",
+    label: "Students",
+    icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z",
+    emoji: "👥",
   },
   {
     path: "/seats",
@@ -35,12 +42,20 @@ export default function Layout() {
   const navigate = useNavigate();
   const { library, client, logout } = useAuthStore();
   const { theme, toggleTheme, initTheme } = useThemeStore();
+  const { stats, fetchStats } = useLibraryStore();
   const [hoveredItem, setHoveredItem] = useState(null);
 
   // Initialize theme on mount
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  // Fetch stats when library is available
+  useEffect(() => {
+    if (library?.id) {
+      fetchStats(library.id);
+    }
+  }, [library?.id, fetchStats]);
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${theme === 'dark'
@@ -79,7 +94,9 @@ export default function Layout() {
                   to={item.path}
                   onMouseEnter={() => setHoveredItem(item.path)}
                   onMouseLeave={() => setHoveredItem(null)}
-                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group ripple ${location.pathname === item.path
+                  className={`relative flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group ripple ${
+                    location.pathname === item.path || 
+                    (item.path !== "/" && location.pathname.startsWith(item.path.split('?')[0]))
                     ? "nav-item-active text-slate-800"
                     : "text-slate-600 hover:text-slate-800 nav-item-hover"
                     }`}
@@ -90,7 +107,9 @@ export default function Layout() {
                   )}
 
                   {/* Icon container */}
-                  <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${location.pathname === item.path
+                  <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+                    location.pathname === item.path || 
+                    (item.path !== "/" && location.pathname.startsWith(item.path.split('?')[0]))
                     ? "bg-white/40"
                     : "bg-white/20 group-hover:bg-white/40"
                     }`}>
@@ -113,7 +132,8 @@ export default function Layout() {
                   <span className="text-sm font-medium relative z-10">{item.label}</span>
 
                   {/* Active indicator */}
-                  {location.pathname === item.path && (
+                  {(location.pathname === item.path || 
+                    (item.path !== "/" && location.pathname.startsWith(item.path.split('?')[0]))) && (
                     <div className="absolute right-2 w-2 h-2 bg-[#5B8BD9] rounded-full shadow-lg shadow-[#5B8BD9]/50" />
                   )}
                 </Link>
@@ -127,13 +147,34 @@ export default function Layout() {
               <span className="text-xs text-slate-600 uppercase tracking-wider">Quick Stats</span>
               <span className="text-lg">📈</span>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Active Users</span>
-                <span className="text-sm font-semibold text-slate-800">24</span>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-slate-500">Subscribed Students</span>
+                  <span className="text-sm font-semibold text-slate-800">{stats?.subscribedStudents || 0}</span>
+                </div>
+                <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full shimmer" 
+                    style={{ width: `${Math.min((stats?.subscribedStudents || 0) * 10, 100)}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
-                <div className="h-full w-3/4 bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] rounded-full shimmer" />
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-slate-500">Occupancy Rate</span>
+                  <span className="text-sm font-semibold text-slate-800">{stats?.occupancyRate || 0}%</span>
+                </div>
+                <div className="h-1.5 bg-white/30 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#5B8BD9] to-[#8B7FCF] rounded-full shimmer" 
+                    style={{ width: `${stats?.occupancyRate || 0}%` }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-white/20">
+                <span className="text-xs text-slate-500">Checked In</span>
+                <span className="text-sm font-semibold text-green-600">{stats?.checkedInUsers || 0}</span>
               </div>
             </div>
           </div>

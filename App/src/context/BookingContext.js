@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import * as api from '../services/api';
 import { useAuth } from './AuthContext';
+import { useLibrary } from './LibraryContext';
 
 const BookingContext = createContext();
 
@@ -9,6 +10,7 @@ const FALLBACK_USER_ID = 1;
 
 export const BookingProvider = ({ children }) => {
     const { userInfo } = useAuth();
+    const { selectedLibrary } = useLibrary();
 
     // Use authenticated user ID or fallback
     const userId = useMemo(() => userInfo?.id || FALLBACK_USER_ID, [userInfo?.id]);
@@ -77,7 +79,8 @@ export const BookingProvider = ({ children }) => {
         setError(null);
 
         try {
-            const { data, error: apiError } = await api.createBooking(userId, seatId, duration, location);
+            const libraryId = selectedLibrary?.id || null;
+            const { data, error: apiError } = await api.createBooking(userId, seatId, duration, location, libraryId);
 
             if (apiError) {
                 setError(apiError.message);

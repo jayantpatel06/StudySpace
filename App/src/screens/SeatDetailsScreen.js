@@ -93,6 +93,7 @@ const SeatDetailsScreen = ({ route }) => {
   const [seatData, setSeatData] = useState(null);
   const [librarySettings, setLibrarySettings] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isBooking, setIsBooking] = useState(false);
 
   // Build dynamic amenities array from seat data
   const getAmenities = () => {
@@ -191,23 +192,28 @@ const SeatDetailsScreen = ({ route }) => {
   }, [selectedLibrary?.id]); // Only trigger when library ID changes
 
   const handleBooking = async () => {
-    // First refresh location to get latest status
-    if (selectedLibrary) {
-      await refreshLocation(selectedLibrary);
-    }
-
-    if (locationStatus !== "in_range") {
-      const distanceMsg = distanceToLibrary
-        ? `You are ${distanceToLibrary}m away. `
-        : "";
-      const radiusMsg = selectedLibrary
-        ? `You need to be within ${selectedLibrary.radius_meters || 100}m of ${selectedLibrary.name}.`
-        : "Please select a library first.";
-      showError(`${distanceMsg}${radiusMsg}`);
-      return;
-    }
+    // Prevent multiple submissions - disable immediately on first tap
+    if (isBooking) return;
+    setIsBooking(true);
 
     try {
+      // First refresh location to get latest status
+      if (selectedLibrary) {
+        await refreshLocation(selectedLibrary);
+      }
+
+      if (locationStatus !== "in_range") {
+        const distanceMsg = distanceToLibrary
+          ? `You are ${distanceToLibrary}m away. `
+          : "";
+        const radiusMsg = selectedLibrary
+          ? `You need to be within ${selectedLibrary.radius_meters || 100}m of ${selectedLibrary.name}.`
+          : "Please select a library first.";
+        showError(`${distanceMsg}${radiusMsg}`);
+        setIsBooking(false);
+        return;
+      }
+
       successNotification();
       const location = selectedLibrary
         ? selectedLibrary.name
@@ -218,6 +224,8 @@ const SeatDetailsScreen = ({ route }) => {
       navigation.navigate("Root", { screen: "Bookings" });
     } catch (err) {
       showError(err.message || "Booking failed");
+    } finally {
+      setIsBooking(false);
     }
   };
 
@@ -546,18 +554,27 @@ const SeatDetailsScreen = ({ route }) => {
         <TouchableOpacity
           style={[
             styles.bookButton,
-            locationStatus !== "in_range" && styles.bookButtonDisabled,
+            (locationStatus !== "in_range" || isBooking) && styles.bookButtonDisabled,
           ]}
           onPress={handleBooking}
-          disabled={locationStatus !== "in_range"}
+          disabled={locationStatus !== "in_range" || isBooking}
         >
-          <Text style={styles.bookButtonText}>
-            {locationStatus === "in_range"
-              ? "Confirm Booking"
-              : "Come Closer to Book"}
-          </Text>
-          {locationStatus === "in_range" && (
-            <MaterialIcons name="bolt" size={20} color="white" />
+          {isBooking ? (
+            <>
+              <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+              <Text style={styles.bookButtonText}>Booking...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.bookButtonText}>
+                {locationStatus === "in_range"
+                  ? "Confirm Booking"
+                  : "Come Closer to Book"}
+              </Text>
+              {locationStatus === "in_range" && (
+                <MaterialIcons name="bolt" size={20} color="white" />
+              )}
+            </>
           )}
         </TouchableOpacity>
       </View>

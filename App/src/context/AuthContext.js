@@ -188,6 +188,7 @@ export const AuthProvider = ({ children }) => {
       streak: userProfile?.streak ?? 0,
       totalFocusTime: userProfile?.total_focus_time ?? 0,
       department: userProfile?.department ?? null,
+      studentCode: userProfile?.student_code ?? null,
     };
   };
 

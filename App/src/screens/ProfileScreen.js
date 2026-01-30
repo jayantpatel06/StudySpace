@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, Linking, Switch } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, Linking, Switch, Clipboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocation } from '../context/LocationContext';
@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useNotifications } from '../hooks/useOffline';
+import { successNotification } from '../utils/haptics';
 
 const ProfileScreen = () => {
     const {
@@ -30,6 +31,7 @@ const ProfileScreen = () => {
     const avatarUrl = userInfo?.imageUrl;
     const points = userInfo?.points;
     const streak = userInfo?.streak;
+    const studentCode = userInfo?.studentCode;
     const focusHours = typeof userInfo?.totalFocusTime === 'number'
         ? Math.round(userInfo.totalFocusTime / 60)
         : null;
@@ -40,6 +42,14 @@ const ProfileScreen = () => {
         const last = userInfo.lastName?.[0] || '';
         const initials = (first + last).toUpperCase();
         return initials || 'U';
+    };
+
+    const handleCopyStudentCode = () => {
+        if (studentCode) {
+            Clipboard.setString(studentCode);
+            successNotification();
+            Alert.alert('Copied!', 'Your student code has been copied to clipboard. Share it with library administrators to subscribe to their libraries.');
+        }
     };
 
     const handleRefreshLocation = () => {
@@ -188,6 +198,37 @@ const ProfileScreen = () => {
                     </View>
                 </View>
             </View>
+
+            {/* Student Code Section */}
+            {studentCode && (
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Your Student Code</Text>
+                    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                        <View style={styles.studentCodeContainer}>
+                            <View style={styles.studentCodeLeft}>
+                                <MaterialIcons name="qr-code" size={24} color={colors.primary} />
+                                <View>
+                                    <Text style={[styles.studentCodeLabel, { color: colors.textMuted }]}>
+                                        Share this code with library administrators
+                                    </Text>
+                                    <Text style={[styles.studentCode, { color: colors.text }]}>
+                                        {studentCode}
+                                    </Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity
+                                onPress={handleCopyStudentCode}
+                                style={[styles.copyButton, { backgroundColor: colors.primaryLight }]}
+                            >
+                                <MaterialIcons name="content-copy" size={20} color={colors.primary} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={[styles.studentCodeHint, { color: colors.textMuted }]}>
+                            Library owners use this code to subscribe you to their library.
+                        </Text>
+                    </View>
+                </View>
+            )}
 
             <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Location Status</Text>
@@ -401,6 +442,41 @@ const styles = StyleSheet.create({
     logoutText: {
         fontWeight: '600',
         color: '#ef4444',
+    },
+    studentCodeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+    },
+    studentCodeLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    studentCodeLabel: {
+        fontSize: 12,
+        marginBottom: 4,
+    },
+    studentCode: {
+        fontSize: 18,
+        fontWeight: '700',
+        letterSpacing: 2,
+        fontFamily: 'monospace',
+    },
+    copyButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    studentCodeHint: {
+        fontSize: 12,
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+        lineHeight: 18,
     },
 });
 

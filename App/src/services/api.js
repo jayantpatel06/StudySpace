@@ -217,7 +217,7 @@ export const updateSeatStatus = async (seatId, status) => {
 /**
  * Create a new booking
  */
-export const createBooking = async (userId, seatId, duration, location) => {
+export const createBooking = async (userId, seatId, duration, location, libraryId = null) => {
   requireSupabase();
 
   const { data, error } = await supabase
@@ -225,6 +225,7 @@ export const createBooking = async (userId, seatId, duration, location) => {
     .insert({
       user_id: userId,
       seat_id: seatId,
+      library_id: libraryId,
       start_time: new Date().toISOString(),
       duration,
       location,

@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     RefreshControl,
+    TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -76,9 +77,12 @@ const LibrarySelectionScreen = ({ navigation }) => {
     const { colors } = useTheme();
     const { 
         libraries, 
+        filteredLibraries,
         selectedLibrary, 
         isLoading, 
         error,
+        searchQuery,
+        setSearchQuery,
         fetchLibraries, 
         selectLibrary,
     } = useLibrary();
@@ -103,6 +107,9 @@ const LibrarySelectionScreen = ({ navigation }) => {
         successNotification();
         navigation.goBack();
     }, [selectLibrary, navigation]);
+
+    // Use filteredLibraries for display
+    const displayLibraries = filteredLibraries || libraries;
 
     if (isLoading && libraries.length === 0) {
         return (
@@ -133,8 +140,27 @@ const LibrarySelectionScreen = ({ navigation }) => {
             <View style={[styles.infoBanner, { backgroundColor: colors.primaryLight }]}>
                 <MaterialIcons name="info" size={20} color={colors.primary} />
                 <Text style={[styles.infoText, { color: colors.primary }]}>
-                    Select a library to enable location-based seat booking. You must be within the library's geofence to book seats.
+                    Only libraries you're subscribed to are shown. Contact a library to get subscribed using your student code.
                 </Text>
+            </View>
+
+            {/* Search Bar */}
+            <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <MaterialIcons name="search" size={22} color={colors.textMuted} />
+                <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Search your libraries..."
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                        <MaterialIcons name="close" size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
+                )}
             </View>
 
             {error ? (
@@ -149,12 +175,17 @@ const LibrarySelectionScreen = ({ navigation }) => {
                         <Text style={styles.retryButtonText}>Try Again</Text>
                     </TouchableOpacity>
                 </View>
-            ) : libraries.length === 0 ? (
+            ) : displayLibraries.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialIcons name="local-library" size={64} color={colors.textMuted} />
-                    <Text style={[styles.emptyTitle, { color: colors.text }]}>No Libraries Available</Text>
+                    <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                        {searchQuery ? 'No Libraries Found' : 'No Subscribed Libraries'}
+                    </Text>
                     <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                        Libraries will appear here once they are registered by an administrator.
+                        {searchQuery 
+                            ? 'Try adjusting your search query.'
+                            : 'You haven\'t been subscribed to any library yet. Contact a library administrator with your student code to get subscribed.'
+                        }
                     </Text>
                 </View>
             ) : (
@@ -173,7 +204,7 @@ const LibrarySelectionScreen = ({ navigation }) => {
                         </View>
                     )}
 
-                    {libraries.map((library) => (
+                    {displayLibraries.map((library) => (
                         <LibraryCard
                             key={library.id}
                             library={library}
@@ -234,6 +265,23 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter_400Regular',
         fontSize: 13,
         lineHeight: 18,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginTop: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 10,
+    },
+    searchInput: {
+        flex: 1,
+        fontFamily: 'Inter_400Regular',
+        fontSize: 15,
+        paddingVertical: 2,
     },
     content: {
         flex: 1,
