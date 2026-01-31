@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import Svg, { Circle } from "react-native-svg";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTheme } from "../context/ThemeContext";
 import { useBooking } from "../context/BookingContext";
-import { useAuth } from "../context/AuthContext";
-import { successNotification, lightImpact } from "../utils/haptics";
+import { useFocusTimer } from "../context/FocusTimerContext";
+import { lightImpact } from "../utils/haptics";
 import * as api from "../services/api";
 
 // Timer presets in minutes
@@ -85,29 +85,37 @@ const FocusTimerScreen = () => {
   const route = useRoute();
   const { colors, isDark } = useTheme();
   const { activeBooking } = useBooking();
-  const { userInfo } = useAuth();
+  const {
+    selectedPreset,
+    workDuration,
+    secondsLeft,
+    isPaused,
+    isBreak,
+    showConfetti,
+    completedBlocks,
+    totalFocusTime,
+    sessionStarted,
+    pointsEarned,
+    startTimer,
+    pauseTimer,
+    resumeTimer,
+    toggleTimer,
+    resetTimer,
+    endSession,
+    selectPreset,
+    setShowConfetti,
+    formatTime,
+    BREAK_DURATION,
+  } = useFocusTimer();
 
-  // Get initial duration from route params or default to 25 min
-  const initialDuration = (route.params?.duration || 25) * 60;
-
-  // Timer states
-  const [selectedPreset, setSelectedPreset] = useState(
-    route.params?.duration || 25,
-  );
-  const [workDuration, setWorkDuration] = useState(initialDuration);
-  const [secondsLeft, setSecondsLeft] = useState(initialDuration);
-  const [isPaused, setIsPaused] = useState(true); // Start paused so user can select duration
-  const [isBreak, setIsBreak] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [completedBlocks, setCompletedBlocks] = useState(0);
-  const [totalFocusTime, setTotalFocusTime] = useState(0); // in seconds
-  const [sessionStarted, setSessionStarted] = useState(false);
-  const [pointsEarned, setPointsEarned] = useState(0);
   const [activeUsers, setActiveUsers] = useState(0);
 
-  // Track session start time for accurate time tracking
-  const sessionStartTimeRef = useRef(null);
-  const lastTickRef = useRef(Date.now());
+  // Handle initial duration from route params
+  useEffect(() => {
+    if (route.params?.duration && !sessionStarted) {
+      selectPreset(route.params.duration);
+    }
+  }, [route.params?.duration]);
 
   // Fetch active users count from API
   useEffect(() => {
@@ -128,82 +136,6 @@ const FocusTimerScreen = () => {
     const interval = setInterval(fetchActiveUsers, 30000);
     return () => clearInterval(interval);
   }, [activeBooking?.libraryId]);
-
-  // Handle timer countdown with real-time accuracy
-  useEffect(() => {
-    if (isPaused || secondsLeft <= 0) {
-      if (secondsLeft <= 0 && !isPaused && sessionStarted) {
-        handlePhaseComplete();
-      }
-      return undefined;
-    }
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - lastTickRef.current) / 1000);
-      lastTickRef.current = now;
-
-      setSecondsLeft((prev) => {
-        const newValue = Math.max(0, prev - elapsed);
-        // Track focus time (not break time)
-        if (!isBreak && elapsed > 0) {
-          setTotalFocusTime((t) => t + elapsed);
-        }
-        return newValue;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isPaused, secondsLeft, isBreak, sessionStarted]);
-
-  // Handle phase completion (work or break)
-  const handlePhaseComplete = useCallback(async () => {
-    successNotification();
-
-    if (!isBreak) {
-      // Work phase completed
-      setShowConfetti(true);
-      const newCompletedBlocks = completedBlocks + 1;
-      setCompletedBlocks(newCompletedBlocks);
-
-      // Award points
-      const newPoints = pointsEarned + POINTS_PER_FOCUS_BLOCK;
-      setPointsEarned(newPoints);
-
-      // Save session to database
-      if (userInfo?.id) {
-        try {
-          await api.recordFocusSession(
-            userInfo.id,
-            workDuration / 60, // duration in minutes
-            POINTS_PER_FOCUS_BLOCK,
-          );
-        } catch (err) {
-          console.error("Error recording focus session:", err);
-        }
-      }
-
-      setTimeout(() => {
-        setShowConfetti(false);
-        setIsBreak(true);
-        setSecondsLeft(BREAK_DURATION);
-        lastTickRef.current = Date.now();
-      }, 2500);
-    } else {
-      // Break completed - switch back to work
-      setIsBreak(false);
-      setSecondsLeft(workDuration);
-      lastTickRef.current = Date.now();
-    }
-  }, [isBreak, completedBlocks, pointsEarned, workDuration, userInfo?.id]);
-
-  const formatTime = (totalSeconds) => {
-    const m = Math.floor(totalSeconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const s = (totalSeconds % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
 
   const formatTotalTime = (totalSeconds) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -226,33 +158,25 @@ const FocusTimerScreen = () => {
             style: "destructive",
             onPress: () => {
               lightImpact();
-              setSelectedPreset(preset);
-              setWorkDuration(preset * 60);
-              setSecondsLeft(preset * 60);
-              setIsBreak(false);
-              setSessionStarted(false);
-              setIsPaused(true);
+              endSession();
+              selectPreset(preset);
             },
           },
         ],
       );
     } else {
       lightImpact();
-      setSelectedPreset(preset);
-      setWorkDuration(preset * 60);
-      setSecondsLeft(preset * 60);
-      setIsBreak(false);
+      selectPreset(preset);
     }
   };
 
   const togglePause = () => {
     lightImpact();
     if (!sessionStarted) {
-      setSessionStarted(true);
-      sessionStartTimeRef.current = Date.now();
+      startTimer();
+    } else {
+      toggleTimer();
     }
-    lastTickRef.current = Date.now();
-    setIsPaused((prev) => !prev);
   };
 
   const handleReset = () => {
@@ -266,10 +190,7 @@ const FocusTimerScreen = () => {
           text: "Reset",
           style: "destructive",
           onPress: () => {
-            setSecondsLeft(workDuration);
-            setIsBreak(false);
-            setIsPaused(true);
-            setSessionStarted(false);
+            resetTimer();
           },
         },
       ],
@@ -278,17 +199,24 @@ const FocusTimerScreen = () => {
 
   const handleLeave = () => {
     lightImpact();
+    // Timer continues in background, just navigate back
+    navigation.goBack();
+  };
+
+  const handleEndSession = () => {
+    lightImpact();
     if (sessionStarted && totalFocusTime > 60) {
-      // If they've focused for more than a minute, confirm
       Alert.alert(
         "End Focus Session?",
-        `You've earned ${pointsEarned} points and completed ${completedBlocks} focus blocks. Are you sure you want to leave?`,
+        `You've earned ${pointsEarned} points and completed ${completedBlocks} focus blocks. Are you sure you want to end?`,
         [
-          { text: "Stay", style: "cancel" },
+          { text: "Cancel", style: "cancel" },
           {
-            text: "Leave",
+            text: "End Session",
             style: "destructive",
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              endSession();
+            },
           },
         ],
       );
@@ -299,9 +227,9 @@ const FocusTimerScreen = () => {
 
   const handleSkipBreak = () => {
     lightImpact();
-    setIsBreak(false);
-    setSecondsLeft(workDuration);
-    lastTickRef.current = Date.now();
+    // Skip break by resetting timer - this will be handled by context
+    resetTimer();
+    startTimer();
   };
 
   // Calculate progress for the ring

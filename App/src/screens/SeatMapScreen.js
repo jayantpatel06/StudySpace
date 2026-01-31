@@ -596,13 +596,6 @@ const SeatMapScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* FAB */}
-      <View style={styles.fabContainer}>
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.primary }]}
-        >
-          <MaterialIcons name="qr-code-scanner" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
 
       {/* Legend & Footer */}
       <View
@@ -655,53 +648,6 @@ const SeatMapScreen = ({ navigation }) => {
             </Text>
           </View>
         </View>
-
-        {/* Selected Seat Info (fallback if bottom sheet not showing) */}
-        {selectedSeat && !showBottomSheet && (
-          <View
-            style={[
-              styles.selectedInfo,
-              {
-                backgroundColor: colors.surfaceSecondary,
-                borderColor: colors.borderLight,
-              },
-            ]}
-          >
-            <View style={styles.selectedInfoLeft}>
-              <View
-                style={[
-                  styles.seatIcon,
-                  { backgroundColor: colors.primaryLight },
-                ]}
-              >
-                <MaterialIcons
-                  name="event-seat"
-                  size={24}
-                  color={colors.primary}
-                />
-              </View>
-              <View>
-                <Text
-                  style={[
-                    styles.selectedLabel,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Selected
-                </Text>
-                <Text style={[styles.selectedSeatId, { color: colors.text }]}>
-                  Seat {selectedSeat}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[styles.bookButton, { backgroundColor: colors.primary }]}
-              onPress={handleBookNow}
-            >
-              <Text style={styles.bookButtonText}>Book Now</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     </View>
   );

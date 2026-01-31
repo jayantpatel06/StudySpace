@@ -39,6 +39,7 @@ import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { AdminProvider, useAdmin } from "./src/context/AdminContext";
 import { LibraryProvider } from "./src/context/LibraryContext";
+import { FocusTimerProvider } from "./src/context/FocusTimerContext";
 import { ToastProvider } from "./src/components/Toast";
 import QRScanScreen from "./src/screens/QRScanScreen";
 import BookingsScreen from "./src/screens/BookingsScreen";
@@ -263,11 +264,13 @@ export default function App() {
                 <LibraryProvider>
                   <LocationProvider>
                     <BookingProvider>
-                      <ToastProvider>
-                        <NavigationContainer>
-                          <RootNavigator />
-                        </NavigationContainer>
-                      </ToastProvider>
+                      <FocusTimerProvider>
+                        <ToastProvider>
+                          <NavigationContainer>
+                            <RootNavigator />
+                          </NavigationContainer>
+                        </ToastProvider>
+                      </FocusTimerProvider>
                     </BookingProvider>
                   </LocationProvider>
                 </LibraryProvider>

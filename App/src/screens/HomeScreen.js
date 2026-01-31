@@ -13,6 +13,7 @@ import { useLocation } from "../context/LocationContext";
 import { useBooking } from "../context/BookingContext";
 import { useTheme } from "../context/ThemeContext";
 import { useLibrary } from "../context/LibraryContext";
+import { useFocusTimer } from "../context/FocusTimerContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import { lightImpact } from "../utils/haptics";
 
@@ -24,6 +25,7 @@ const HomeScreen = () => {
     useBooking();
   const { colors, isDark } = useTheme();
   const { selectedLibrary } = useLibrary();
+  const { isTimerRunning, secondsLeft, formatTime, isBreak } = useFocusTimer();
   const [isLoading, setIsLoading] = useState(true);
 
   // Sync selected library with location context
@@ -42,14 +44,6 @@ const HomeScreen = () => {
   const handleNavigate = (screen, params) => {
     lightImpact();
     navigation.navigate(screen, params);
-  };
-
-  // Format time helper
-  const formatTime = (seconds) => {
-    if (seconds === null || seconds === undefined) return "--:--";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   if (isLoading) {
@@ -148,6 +142,7 @@ const HomeScreen = () => {
               color={selectedLibrary ? "#fff" : colors.textMuted}
             />
           </View>
+
           <View style={styles.libraryBannerContent}>
             <Text
               style={[
@@ -377,6 +372,53 @@ const HomeScreen = () => {
             >
               <MaterialIcons name="arrow-forward" size={20} color="#fff" />
             </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Active Focus Timer Banner */}
+        {isTimerRunning && (
+          <TouchableOpacity
+            style={[
+              styles.focusTimerBanner,
+              {
+                backgroundColor: isBreak
+                  ? colors.successLight
+                  : colors.primaryLight,
+                borderColor: isBreak ? colors.success : colors.primary,
+              },
+            ]}
+            onPress={() => handleNavigate("FocusTimer")}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.focusTimerPulse,
+                { backgroundColor: isBreak ? colors.success : colors.primary },
+              ]}
+            />
+            <MaterialIcons
+              name={isBreak ? "local-cafe" : "timer"}
+              size={22}
+              color={isBreak ? colors.success : colors.primary}
+            />
+            <View style={styles.focusTimerContent}>
+              <Text
+                style={[
+                  styles.focusTimerLabel,
+                  { color: isBreak ? colors.success : colors.primary },
+                ]}
+              >
+                {isBreak ? "Break Time" : "Focus Session Active"}
+              </Text>
+              <Text style={[styles.focusTimerTime, { color: colors.text }]}>
+                {formatTime(secondsLeft)} remaining
+              </Text>
+            </View>
+            <MaterialIcons
+              name="chevron-right"
+              size={24}
+              color={isBreak ? colors.success : colors.primary}
+            />
           </TouchableOpacity>
         )}
 
@@ -711,6 +753,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#92400e",
     lineHeight: 16,
+  },
+  focusTimerBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 20,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 12,
+  },
+  focusTimerPulse: {
+    position: "absolute",
+    left: 14,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  focusTimerContent: {
+    flex: 1,
+    marginLeft: 4,
+  },
+  focusTimerLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  focusTimerTime: {
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
 
